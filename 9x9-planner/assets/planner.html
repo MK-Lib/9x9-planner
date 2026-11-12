@@ -8,16 +8,17 @@
   --paper:#f6f6f3; --sheet:#ffffff; --ink:#15161a; --muted:#6a6c75; --rule:#d9dad6; --rule-strong:#9fa1a8;
   --accent:#2a3bd1; --accent-soft:#e6e8fb; --done:#15161a; --done-fg:#ffffff; --pillar:#eceef0; --goal:#15161a; --goal-fg:#ffffff;
   --danger:#b3261e;
+  --pA:#3b5bdb; --pB:#0c8599; --pC:#2f9e44; --pD:#e8590c; --pE:#c2255c; --pF:#7048e8; --pG:#b08900; --pH:#5c6670;
   --f-display:"Archivo","Arial Narrow",Arial,sans-serif;
   --f-body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --paper:#111216; --sheet:#1a1b20; --ink:#ecedf0; --muted:#9b9da6; --rule:#2c2e35; --rule-strong:#565963;
-  --accent:#8f9bff; --accent-soft:#252a52; --done:#ecedf0; --done-fg:#111216; --pillar:#24262c; --goal:#ecedf0; --goal-fg:#111216; --danger:#ff8a80; color-scheme:dark}}
+  --accent:#8f9bff; --accent-soft:#252a52; --done:#ecedf0; --done-fg:#111216; --pillar:#24262c; --goal:#ecedf0; --goal-fg:#111216; --danger:#ff8a80; --pA:#748ffc; --pB:#3bc9db; --pC:#69db7c; --pD:#ffa94d; --pE:#f783ac; --pF:#b197fc; --pG:#ffd43b; --pH:#adb5bd; color-scheme:dark}}
 :root[data-theme="dark"]{
   --paper:#111216; --sheet:#1a1b20; --ink:#ecedf0; --muted:#9b9da6; --rule:#2c2e35; --rule-strong:#565963;
-  --accent:#8f9bff; --accent-soft:#252a52; --done:#ecedf0; --done-fg:#111216; --pillar:#24262c; --goal:#ecedf0; --goal-fg:#111216; --danger:#ff8a80; color-scheme:dark}
+  --accent:#8f9bff; --accent-soft:#252a52; --done:#ecedf0; --done-fg:#111216; --pillar:#24262c; --goal:#ecedf0; --goal-fg:#111216; --danger:#ff8a80; --pA:#748ffc; --pB:#3bc9db; --pC:#69db7c; --pD:#ffa94d; --pE:#f783ac; --pF:#b197fc; --pG:#ffd43b; --pH:#adb5bd; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
 .wrap{max-width:1240px;margin:0 auto;padding:0 16px 48px;display:grid;gap:18px}
@@ -55,26 +56,50 @@ button{cursor:pointer}
 .gridbox{overflow-x:auto;-webkit-overflow-scrolling:touch;display:grid;gap:6px}
 .gridhint{display:none;font-size:12px;color:var(--muted);margin:0}
 @media (max-width:640px){.gridhint{display:block}}
-.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:6px;aspect-ratio:1;max-width:100%;min-width:600px;background:var(--rule-strong);padding:6px;border-radius:8px}
-.block{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));min-width:0;min-height:0;gap:2px;background:var(--rule);border-radius:3px;outline:0 solid var(--accent);transition:outline-width .1s}
-.block.sel{outline-width:3px}
-.cell{min-height:0;position:relative;background:var(--sheet);border:0;padding:3px 4px;text-align:left;display:flex;flex-direction:column;justify-content:flex-start;overflow:hidden;min-width:0;font-size:clamp(8px,1.05vw,12px);line-height:1.15}
-.cell .code{font-family:var(--f-mono);font-size:clamp(7px,.75vw,10px);color:var(--muted);line-height:1;flex:none}
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:10px;aspect-ratio:1;max-width:100%;min-width:600px;background:var(--paper);padding:10px;border-radius:14px;box-shadow:inset 0 0 0 1px var(--rule)}
+.block{--pc:var(--rule-strong);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));min-width:0;min-height:0;gap:3px;padding:3px;background:color-mix(in srgb,var(--pc) 22%,var(--rule));border-radius:9px;outline:0 solid var(--pc);outline-offset:2px;transition:outline-width .12s,transform .12s,box-shadow .12s}
+.block.sel{outline-width:2.5px}
+.block.centre{background:var(--ink);padding:4px;gap:4px;box-shadow:0 8px 24px -8px color-mix(in srgb,var(--ink) 55%,transparent);transform:scale(1.035);z-index:1;outline-color:var(--ink)}
+.block.hl:not(.centre){outline-width:2.5px}
+.cell{--pc2:var(--pc);min-height:0;position:relative;background:var(--sheet);border:0;border-radius:5px;padding:4px 5px;text-align:left;display:flex;flex-direction:column;justify-content:flex-start;overflow:hidden;min-width:0;font-size:clamp(8px,1.05vw,12px);line-height:1.15}
+.cell .code{font-family:var(--f-mono);font-size:clamp(7px,.75vw,10px);color:var(--muted);line-height:1;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px}
 /* text is sized by fitBoard(): whole words only, shrunk until it sits inside the square */
 .cell .tx{display:block;flex:1 1 auto;min-height:0;overflow:hidden;overflow-wrap:normal;word-break:normal;hyphens:manual;margin-top:3px;line-height:1.14;text-wrap:balance}
 .cell .tx.clamp{display:-webkit-box;-webkit-box-orient:vertical;overflow-wrap:break-word}
+.cell.empty{background:color-mix(in srgb,var(--sheet) 55%,transparent)}
 .cell.empty .tx{color:var(--rule-strong)}
-.cell.pil{background:var(--pillar);font-weight:700;font-family:var(--f-display);font-stretch:75%;letter-spacing:-.01em}
-.cell.goal{background:var(--goal);color:var(--goal-fg);font-weight:800;font-family:var(--f-display);font-stretch:80%;text-align:center}
+.cell.pil{background:var(--pc2);color:#fff;font-weight:700;font-family:var(--f-display);font-stretch:75%;letter-spacing:-.01em}
+.cell.pil .code{color:inherit;opacity:.85;font-weight:500}
+.cell.pil.empty{background:color-mix(in srgb,var(--pc2) 45%,var(--sheet))}
+.cell.pil.empty .tx{color:inherit;opacity:.8}
+.cell.ring{background:color-mix(in srgb,var(--pc2) 20%,var(--sheet));color:var(--ink);box-shadow:inset 4px 0 0 var(--pc2);padding-left:9px}
+.cell.ring .code{color:var(--pc2);opacity:1}
+.cell.ring.empty .tx{color:var(--muted)}
+.cell.ring.hl{background:color-mix(in srgb,var(--pc2) 34%,var(--sheet))}
+.pbar{flex:none;height:4px;border-radius:2px;background:color-mix(in srgb,currentColor 25%,transparent);overflow:hidden;margin-top:3px}
+.pbar i{display:block;height:100%;background:currentColor;border-radius:2px}
+.cell.ring .pbar{background:color-mix(in srgb,var(--pc2) 25%,transparent)}
+.cell.ring .pbar i{background:var(--pc2)}
+:root[data-theme="dark"] .cell.pil:not(.ring){color:#111216}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .cell.pil:not(.ring){color:#111216}}
+.cell.goal{background:var(--goal);color:var(--goal-fg);font-weight:800;font-family:var(--f-display);font-stretch:80%;text-align:center;box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--goal-fg) 18%,transparent)}
+.cell.goal .code{letter-spacing:.06em;padding-right:0}
+.cell.goal .pbar{margin-top:4px}
 .cell.goal .tx{flex:1 1 auto;display:flex;align-items:center;justify-content:center}
 .cell.goal .tx.clamp{display:-webkit-box;align-items:normal}
 .cell.goal .code{color:inherit;opacity:.6}
-.cell.s1{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
-.cell.s2{background:var(--done);color:var(--done-fg)}
-.cell.s2 .code{color:inherit;opacity:.6}
-.cell.s2 .tx{text-decoration:line-through;text-decoration-thickness:1px}
-.cell.hit{box-shadow:inset 0 0 0 2px var(--accent)}
-.cell:hover{filter:brightness(.97)}
+.cell.s1{background:color-mix(in srgb,var(--pc2) 14%,var(--sheet));box-shadow:inset 0 0 0 2px var(--pc2)}
+.cell.s1 .code::after{content:" · now";color:var(--pc2);font-weight:500}
+.cell.s2{background:color-mix(in srgb,var(--pc2) 82%,var(--ink));color:#fff}
+.cell.s2 .code{color:inherit;opacity:.8}
+.cell.s2 .code::after{content:" ✓";font-weight:600}
+:root[data-theme="dark"] .cell.s2{background:color-mix(in srgb,var(--pc2) 70%,var(--paper));color:#111216}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .cell.s2{background:color-mix(in srgb,var(--pc2) 70%,var(--paper));color:#111216}}
+.cell.late:not(.s2){box-shadow:inset 0 -3px 0 var(--danger)}
+.cell.late.s1{box-shadow:inset 0 0 0 2px var(--pc2),inset 0 -4px 0 var(--danger)}
+.cell.hit{box-shadow:inset 0 0 0 2.5px var(--ink)}
+.cell:hover{filter:brightness(.96)}
+.cell:active{transform:scale(.98)}
 @media (max-width:520px){.cell{padding:2px 3px}}
 
 /* panel */
@@ -218,7 +243,7 @@ details.brief dd{margin:0;color:var(--muted)}
 .pick{border:1px solid var(--rule-strong);background:var(--sheet);border-radius:999px;padding:3px 10px 3px 3px;display:inline-flex;gap:6px;align-items:center;font-size:13px}
 .pick.on{border-color:var(--accent);background:var(--accent-soft)}
 .pick.none{padding:3px 10px}
-.cell .od{position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%}
+.cell .od{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;box-shadow:0 0 0 1.5px var(--sheet)}
 /* my tasks */
 .mine{display:grid;gap:22px}
 .mgroup h3{margin:0 0 6px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
@@ -229,6 +254,15 @@ details.brief dd{margin:0;color:var(--muted)}
 .mrow .open small{color:var(--muted);font-size:12px}
 .mrow .due{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .mrow.late .due{color:var(--danger)}
+/* how-it-works strip */
+.howto{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr)) auto;gap:14px;align-items:center;background:var(--sheet);border:1px solid var(--rule);border-radius:12px;padding:12px 14px}
+.howto .mini{display:grid;grid-template-columns:repeat(3,10px);gap:2px}
+.howto .mini i{width:10px;height:10px;border-radius:2px;background:var(--rule)}
+.howto .mini i.g{background:var(--goal)}
+.howto .hstep{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.35;min-width:0}
+.howto .hstep b{flex:none;width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-size:11px;font-family:var(--f-mono)}
+.howto .x{border:0;background:none;color:var(--muted);font-size:13px;font-weight:600;padding:4px 6px}
+@media (max-width:760px){.howto{grid-template-columns:1fr}.howto .mini{display:none}}
 /* clickable task rows + task detail */
 .trow{display:grid;grid-template-columns:28px 34px minmax(0,1fr);gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--rule)}
 .trow:last-child{border-bottom:0}
@@ -310,6 +344,7 @@ let user = null, me = null, people = [], profs = {}, ownPick = false, ownHits = 
 const synced = {}, legacy = new Set(), chain = {}, latest = {};
 let draft = (() => { try { const d = JSON.parse(lsGet0("nxn-draft")||"null"); if (d && d.areas) return Object.assign(blankDraft(), d); } catch(e){} return blankDraft(); })();
 const ARTIFACT_URL = "{{PLANNER_URL}}"; // the skill fills this in after the first publish
+let showHowto = lsGet0("nxn-howto") !== "0";
 let ovSort = lsGet0("nxn-sort") || "progress", openNote = null, showHand = false;
 let gBusy = false, gMsg = "", gErr = false, draftTimer = null;
 function lsGet0(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
@@ -446,21 +481,22 @@ function render(){
   }
   const p = plans[cur], s = stats(p), pct = s.total ? Math.round(s.done/s.total*100) : 0;
 
-  let board = "";
+  let board = ""; const td0 = today();
   for (let b=0;b<9;b++){
     let cells = "";
     for (let c=0;c<9;c++){
-      let cls="cell", code="", tx="", data=`data-b="${b}" data-c="${c}"`;
-      if (b===4 && c===4){ cls+=" goal"; code="GOAL"; tx=p.goal||"Your goal"; }
-      else if (b===4 || c===4){ const i = idxOf(b===4?c:b); const t=p.pillars[i].title;
-        cls+=" pil"+(t?"":" empty"); code=L[i]; tx=t||"Pillar "+L[i]; }
+      let cls="cell", code="", tx="", data=`data-b="${b}" data-c="${c}"`, style="", extra="";
+      if (b===4 && c===4){ cls+=" goal"; code=`GOAL ${pct}%`; tx=p.goal||"Your goal"; extra=`<span class="pbar"><i style="width:${pct}%"></i></span>`; }
+      else if (b===4 || c===4){ const i = idxOf(b===4?c:b); const t=p.pillars[i].title, ps=stats(p,i);
+        cls+=" pil"+(b===4?" ring":"")+(t?"":" empty"); code=`${L[i]} · ${ps.done}/${ps.total||8}`; tx=t||"Pillar "+L[i];
+        style=` style="--pc2:var(--p${L[i]})"`; extra=`<span class="pbar"><i style="width:${ps.total?Math.round(ps.done/ps.total*100):0}%"></i></span>`; }
       else { const i=idxOf(b), j=idxOf(c), t=p.pillars[i].tasks[j];
-        cls+=(t.t?"":" empty")+(t.t?" s"+t.s:""); code=L[i]+(j+1); tx=t.t||"—";
+        cls+=(t.t?"":" empty")+(t.t?" s"+t.s:"")+(t.t&&t.s!==2&&t.due&&t.due<td0?" late":""); code=L[i]+(j+1); tx=t.t||"+";
         if (focusTask && focusTask[0]===i && focusTask[1]===j) cls+=" hit"; }
       const od = (b!==4 && c!==4) ? p.pillars[idxOf(b)].tasks[idxOf(c)].o : "";
-      cells += `<button class="${cls}" ${data} aria-label="${esc(code+": "+tx+(od?", owner "+pname(od):""))}"><span class="code">${code}</span><span class="tx">${esc(tx)}</span>${od?`<i class="od" style="background:${esc((profs[od]&&profs[od].color)||"var(--accent)")}"></i>`:""}</button>`;
+      cells += `<button class="${cls}" ${data}${style} aria-label="${esc(code+": "+tx+(od?", owner "+pname(od):""))}"><span class="code">${code}</span><span class="tx">${esc(tx)}</span>${extra}${od?`<i class="od" style="background:${esc((profs[od]&&profs[od].color)||"var(--accent)")}"></i>`:""}</button>`;
     }
-    board += `<div class="block${b===sel?" sel":""}">${cells}</div>`;
+    board += `<div class="block${b===sel?" sel":""}${b===4?" centre":""}" data-pl="${b===4?"":L[idxOf(b)]}"${b!==4?` style="--pc:var(--p${L[idxOf(b)]})"`:""}>${cells}</div>`;
   }
 
   // in-progress / overdue strip
@@ -471,7 +507,12 @@ function render(){
   app.innerHTML = `
   <div class="boardbar"><select id="planSel" class="sel" aria-label="Switch plan">${ids.map(id => `<option value="${id}" ${id===cur?"selected":""}>${esc(plans[id].name)}</option>`).join("")}</select></div>
   <div class="meter"><span>${s.done}/${s.total} done · ${s.doing} in progress · ${pct}% · ${p.pillars.flatMap(x=>x.tasks).filter(t=>t.t.trim()&&t.g.trim()).length}/${s.total} with a goal</span><div class="bar"><i style="width:${pct}%"></i></div>
-    <span class="legend"><span><b></b>To do</span><span><b style="background:var(--accent-soft);border-color:var(--accent)"></b>In progress</span><span><b style="background:var(--done);border-color:var(--done)"></b>Done</span></span></div>
+    <span class="legend"><span><b></b>To do</span><span><b style="background:color-mix(in srgb,var(--pA) 14%,var(--sheet));border:2px solid var(--pA)"></b>In progress</span><span><b style="background:var(--pA);border-color:var(--pA)"></b>Done</span><span><b style="background:var(--sheet);box-shadow:inset 0 -3px 0 var(--danger)"></b>Overdue</span></span></div>
+  ${showHowto ? `<div class="howto" role="note"><span class="mini" aria-hidden="true">${[0,1,2,3,4,5,6,7,8].map(k=>`<i class="${k===4?"g":""}" style="${k!==4?`background:var(--p${L[idxOf(k)]})`:""}"></i>`).join("")}</span>
+    <span class="hstep"><b>1</b><span><strong>Your goal</strong> sits in the dark centre square.</span></span>
+    <span class="hstep"><b>2</b><span><strong>8 pillars</strong> ring it, each with its own colour and progress bar.</span></span>
+    <span class="hstep"><b>3</b><span>Each pillar's <strong>8 actions</strong> fill the outer square of the same colour. Tap any square to open it.</span></span>
+    <button class="x" id="howtoX">Got it</button></div>` : ""}
   <div class="main">
     <div class="gridbox"><div class="board" id="board">${board}</div><p class="gridhint">Swipe sideways to see the whole grid. Tap any square to open it.</p></div>
     <section class="panel" id="panel">${sel===4 ? centrePanel(p) : pillarPanel(p, idxOf(sel))}</section>
@@ -562,6 +603,12 @@ function pickerHTML(t){
 }
 function wire(p){
   const ps=$("#planSel"); if (ps) ps.onchange = onPlanSel;
+  const hx=$("#howtoX"); if (hx) hx.onclick = () => { showHowto=false; lsSet("nxn-howto","0"); render(); };
+  // hovering a pillar lights up its outer square and its ring square together
+  const bd=$("#board");
+  if (bd){ const light = k => { bd.querySelectorAll(".hl").forEach(e=>e.classList.remove("hl")); if (!k) return; const blk=bd.querySelector(`.block[data-pl="${k}"]`); if (blk) blk.classList.add("hl"); const ring=bd.querySelector(`.block.centre .cell[data-c="${POS[L.indexOf(k)]}"]`); if (ring) ring.classList.add("hl"); };
+    bd.querySelectorAll(".block").forEach(blk => { if (blk.dataset.pl) { blk.onmouseenter = () => light(blk.dataset.pl); blk.onmouseleave = () => light(null); } });
+    bd.querySelectorAll(".block.centre .cell.ring").forEach(c => { const k=L[idxOf(+c.dataset.c)]; c.onmouseenter = () => light(k); c.onmouseleave = () => light(null); }); }
   document.querySelectorAll("#board .cell").forEach(el => el.onclick = () => {
     const b=+el.dataset.b, c=+el.dataset.c;
     if (b===4 && c!==4){ sel = POS[idxOf(c)]; focusTask=null; }
@@ -651,7 +698,7 @@ function refreshBoardOnly(){
     const b=+el.dataset.b, c=+el.dataset.c; let tx;
     if (b===4&&c===4) tx=p.goal||"Your goal";
     else if (b===4||c===4){ const i=idxOf(b===4?c:b); tx=p.pillars[i].title||"Pillar "+L[i]; el.classList.toggle("empty",!p.pillars[i].title); }
-    else { const t=p.pillars[idxOf(b)].tasks[idxOf(c)]; tx=t.t||"—"; el.classList.toggle("empty",!t.t); }
+    else { const t=p.pillars[idxOf(b)].tasks[idxOf(c)]; tx=t.t||"+"; el.classList.toggle("empty",!t.t); }
     el.querySelector(".tx").textContent=tx;
   });
   fitSoon();

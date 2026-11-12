@@ -4,7 +4,7 @@
 
 One goal in the centre. Eight pillars around it that must all succeed. Eight actions under each pillar, every one with a clear definition of done. That's 64 actions covering everything from the code to the marketing, the budget, the paperwork and the documentation, on one grid you can see at a glance.
 
-![The 9×9 grid: goal in the centre, eight pillars around it, each broken into eight actions. Done actions are dark, actions in progress are outlined in blue.](docs/screenshots/grid.png)
+![The 9×9 grid: the goal in the dark centre square, eight colour-coded pillars around it with progress bars, and each pillar's eight actions in the outer square of the same colour. Done actions fill with the pillar's colour; actions in progress are outlined.](docs/screenshots/grid.png)
 
 **[Download the skill (ZIP)](https://github.com/MK-Lib/9x9-planner/raw/main/9x9-planner.zip)** · [Install](#install) · [Commands](#commands) · [How it works](#how-it-works)
 
@@ -39,7 +39,7 @@ Because every pillar gets the same eight slots, the grid makes it obvious when a
 - **Organises your thinking.** Talk or type everything about your idea in any order. Claude sorts it into a brief, shows what's clear, vague or missing, and asks sharp follow-up questions about *your* idea.
 - **Builds the complete plan.** It proposes a measurable goal, 8 pillars and 64 actions, each with a goal you can check ("10 signed partner agreements", not "work on partners").
 - **Captures a chat you've already had.** Mid-project? `/9x9-planner capture` reads the conversation, marks what's already done, lists what was discussed but not done, and fills in the areas the chat never touched.
-- **Shows progress visually.** A live grid in Claude: dark squares are done, outlined ones are in progress. There's also a list of all your plans ranked by progress, and a "My tasks" view per person.
+- **Shows progress visually.** A live, colour-coded grid in Claude. Each pillar has its own colour and progress bar, and its actions sit in the outer square of the same colour. Done actions fill with colour, so the grid fills up as the project moves. There's also a list of all your plans ranked by progress, and a "My tasks" view per person.
 - **Works with you on any action.** Say `/9x9-planner work` and Claude takes the next action, checks its goal, does the research, drafts or analysis, and ticks it off when the goal is met.
 - **Stays in sync everywhere.** Every chat reads and writes the same live plan, and every change goes into a shared activity log. Nothing lives in a single chat.
 - **Keeps the whole plan consistent.** When something changes, such as a slipped date, a new decision or a finished result, Claude checks which other actions are affected and proposes the follow-on edits.
