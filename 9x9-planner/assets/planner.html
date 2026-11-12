@@ -49,19 +49,25 @@ button{cursor:pointer}
 
 /* main layout */
 .main{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:22px;align-items:start}
-@media (max-width:900px){.main{grid-template-columns:1fr}}
+@media (max-width:900px){.main{grid-template-columns:minmax(0,1fr)}}
 
 /* the grid */
-.gridbox{overflow-x:auto}
-.board{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;aspect-ratio:1;max-width:100%;min-width:330px;background:var(--rule-strong);padding:6px;border-radius:8px}
-.block{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--rule);border-radius:3px;outline:0 solid var(--accent);transition:outline-width .1s}
+.gridbox{overflow-x:auto;-webkit-overflow-scrolling:touch;display:grid;gap:6px}
+.gridhint{display:none;font-size:12px;color:var(--muted);margin:0}
+@media (max-width:640px){.gridhint{display:block}}
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:6px;aspect-ratio:1;max-width:100%;min-width:600px;background:var(--rule-strong);padding:6px;border-radius:8px}
+.block{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));min-width:0;min-height:0;gap:2px;background:var(--rule);border-radius:3px;outline:0 solid var(--accent);transition:outline-width .1s}
 .block.sel{outline-width:3px}
-.cell{position:relative;background:var(--sheet);border:0;padding:3px 4px;text-align:left;display:flex;flex-direction:column;justify-content:flex-start;overflow:hidden;min-width:0;font-size:clamp(8px,1.05vw,12px);line-height:1.15}
-.cell .code{font-family:var(--f-mono);font-size:.78em;color:var(--muted);line-height:1}
-.cell .tx{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:break-word;hyphens:auto;-webkit-hyphens:auto;margin-top:2px}
+.cell{min-height:0;position:relative;background:var(--sheet);border:0;padding:3px 4px;text-align:left;display:flex;flex-direction:column;justify-content:flex-start;overflow:hidden;min-width:0;font-size:clamp(8px,1.05vw,12px);line-height:1.15}
+.cell .code{font-family:var(--f-mono);font-size:clamp(7px,.75vw,10px);color:var(--muted);line-height:1;flex:none}
+/* text is sized by fitBoard(): whole words only, shrunk until it sits inside the square */
+.cell .tx{display:block;flex:1 1 auto;min-height:0;overflow:hidden;overflow-wrap:normal;word-break:normal;hyphens:manual;margin-top:3px;line-height:1.14;text-wrap:balance}
+.cell .tx.clamp{display:-webkit-box;-webkit-box-orient:vertical;overflow-wrap:break-word}
 .cell.empty .tx{color:var(--rule-strong)}
 .cell.pil{background:var(--pillar);font-weight:700;font-family:var(--f-display);font-stretch:75%;letter-spacing:-.01em}
-.cell.goal{background:var(--goal);color:var(--goal-fg);font-weight:800;font-family:var(--f-display);font-stretch:80%;justify-content:center;text-align:center;font-size:clamp(9px,1.25vw,14px)}
+.cell.goal{background:var(--goal);color:var(--goal-fg);font-weight:800;font-family:var(--f-display);font-stretch:80%;text-align:center}
+.cell.goal .tx{flex:1 1 auto;display:flex;align-items:center;justify-content:center}
+.cell.goal .tx.clamp{display:-webkit-box;align-items:normal}
 .cell.goal .code{color:inherit;opacity:.6}
 .cell.s1{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
 .cell.s2{background:var(--done);color:var(--done-fg)}
@@ -69,7 +75,7 @@ button{cursor:pointer}
 .cell.s2 .tx{text-decoration:line-through;text-decoration-thickness:1px}
 .cell.hit{box-shadow:inset 0 0 0 2px var(--accent)}
 .cell:hover{filter:brightness(.97)}
-@media (max-width:520px){.cell .tx{-webkit-line-clamp:3}.cell{padding:2px 3px}}
+@media (max-width:520px){.cell{padding:2px 3px}}
 
 /* panel */
 .panel{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:18px;display:grid;gap:14px;min-width:0}
@@ -467,11 +473,12 @@ function render(){
   <div class="meter"><span>${s.done}/${s.total} done · ${s.doing} in progress · ${pct}% · ${p.pillars.flatMap(x=>x.tasks).filter(t=>t.t.trim()&&t.g.trim()).length}/${s.total} with a goal</span><div class="bar"><i style="width:${pct}%"></i></div>
     <span class="legend"><span><b></b>To do</span><span><b style="background:var(--accent-soft);border-color:var(--accent)"></b>In progress</span><span><b style="background:var(--done);border-color:var(--done)"></b>Done</span></span></div>
   <div class="main">
-    <div class="gridbox"><div class="board" id="board" lang="${esc((navigator.language||"en").slice(0,5))}">${board}</div></div>
+    <div class="gridbox"><div class="board" id="board">${board}</div><p class="gridhint">Swipe sideways to see the whole grid. Tap any square to open it.</p></div>
     <section class="panel" id="panel">${sel===4 ? centrePanel(p) : pillarPanel(p, idxOf(sel))}</section>
   </div>
   ${now.length ? `<section class="now"><h2>On the desk</h2><div class="nowlist">${now.map(n=>`<button class="nowitem${n.late?" late":""}" data-i="${n.i}" data-j="${n.j}"><span class="code">${L[n.i]}${n.j+1}${n.t.due?" · "+n.t.due:""}</span>${esc(n.t.t)}</button>`).join("")}</div></section>`:""}`;
   wire(p);
+  fitBoard();
 }
 
 function nav(){
@@ -609,6 +616,35 @@ function wirePicks(t){
   document.querySelectorAll("[data-pickid]").forEach(b => b.onclick = () => { t.o=b.dataset.pickid; ownPick=false; ownHits=[]; persist(cur); render(); });
 }
 // update the grid text while typing without stealing focus from the panel
+// Fit each square's text inside its box: largest common size per kind of square, whole words only;
+// squares that still don't fit shrink on their own, and only as a last resort clamp with an ellipsis.
+function fitBoard(){
+  const board = document.getElementById("board"); if (!board) return;
+  const cells = [...board.querySelectorAll(".cell")]; if (!cells.length) return;
+  const w = cells[0].clientWidth;
+  const kinds = { task:{max:Math.min(14, Math.max(8, w/6.4)), floor:Math.max(7, Math.min(9, w/7.5))}, pil:{max:Math.min(15, Math.max(8.5, w/5.8)), floor:Math.max(7, Math.min(9.5, w/7))}, goal:{max:Math.min(19, Math.max(9, w/4.6)), floor:Math.max(7, Math.min(10, w/6.5))} };
+  const groups = { task:[], pil:[], goal:[] };
+  cells.forEach(c => { const tx = c.querySelector(".tx"); tx.classList.remove("clamp"); tx.style.webkitLineClamp = ""; groups[c.classList.contains("goal") ? "goal" : c.classList.contains("pil") ? "pil" : "task"].push(tx); });
+  const fits = tx => tx.scrollWidth <= tx.clientWidth + 0.5 && tx.scrollHeight <= tx.clientHeight + 0.5;
+  for (const k in groups){
+    const g = groups[k], K = kinds[k]; if (!g.length) continue;
+    let size = K.floor;
+    // largest size at which nearly all squares of this kind fit; the few that don't shrink on their own below
+    const need = Math.ceil(g.length * 0.85);
+    for (let fs = K.max; fs >= K.floor; fs -= 0.5){ g.forEach(tx => tx.style.fontSize = fs + "px"); if (g.filter(fits).length >= need) { size = fs; break; } }
+    g.forEach(tx => tx.style.fontSize = size + "px");
+    g.filter(tx => !fits(tx)).forEach(tx => {
+      let lo = 6, hi = size, best = null;
+      for (let n = 0; n < 6; n++){ const mid = (lo + hi) / 2; tx.style.fontSize = mid + "px"; if (fits(tx)) { best = mid; lo = mid; } else hi = mid; }
+      if (best && best >= 6) { tx.style.fontSize = best + "px"; return; }
+      tx.style.fontSize = "6.5px"; tx.classList.add("clamp");
+      const lh = parseFloat(getComputedStyle(tx).lineHeight) || 8; tx.style.webkitLineClamp = String(Math.max(1, Math.floor(tx.clientHeight / lh)));
+    });
+  }
+}
+let fitRaf = 0; const fitSoon = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fitBoard); };
+if (window.ResizeObserver) new ResizeObserver(fitSoon).observe(document.documentElement);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitSoon);
 function refreshBoardOnly(){
   const p=plans[cur];
   document.querySelectorAll("#board .cell").forEach(el=>{
@@ -618,6 +654,7 @@ function refreshBoardOnly(){
     else { const t=p.pillars[idxOf(b)].tasks[idxOf(c)]; tx=t.t||"—"; el.classList.toggle("empty",!t.t); }
     el.querySelector(".tx").textContent=tx;
   });
+  fitSoon();
 }
 
 /* ---------- Claude drafting ---------- */
