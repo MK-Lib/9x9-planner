@@ -6,7 +6,7 @@ One goal in the centre. Eight pillars around it that must all succeed. Eight act
 
 ![The 9×9 grid: goal in the centre, eight pillars around it, each broken into eight actions. Done actions are dark, actions in progress are outlined in blue.](docs/screenshots/grid.png)
 
-**[Download the skill (ZIP)](https://github.com/MK-Lib/9x9-planner/releases/latest/download/9x9-planner.zip)** · [Install](#install) · [Commands](#commands) · [How it works](#how-it-works)
+**[Download the skill (ZIP)](https://github.com/MK-Lib/9x9-planner/raw/main/9x9-planner.zip)** · [Install](#install) · [Commands](#commands) · [How it works](#how-it-works)
 
 ---
 
@@ -53,7 +53,7 @@ Product and app launches · starting a company · fundraising rounds · opening 
 
 **Claude (web, desktop, mobile)**
 
-1. Download **[9x9-planner.zip](https://github.com/MK-Lib/9x9-planner/releases/latest/download/9x9-planner.zip)**.
+1. Download **[9x9-planner.zip](https://github.com/MK-Lib/9x9-planner/raw/main/9x9-planner.zip)**.
 2. In Claude, open **Customize → Skills**, click **+**, then **Create skill → Upload a skill**, and choose the ZIP.
 3. Make sure the skill is switched on. Code execution and file creation must be enabled in your settings.
 4. Start a chat and type `/9x9-planner`.
@@ -126,7 +126,8 @@ Claude reads and writes that same database from any chat through the skill, so t
 ## Repository layout
 
 ```
-9x9-planner/            the skill (this folder is what goes in the ZIP)
+9x9-planner.zip         the skill, ready to upload to Claude
+9x9-planner/            the skill's source (this folder is what goes in the ZIP)
   SKILL.md              instructions Claude follows
   assets/planner.html   the live planner app, installed into your account on first use
 docs/screenshots/       images used in this README
