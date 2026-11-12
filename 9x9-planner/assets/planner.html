@@ -1,0 +1,974 @@
+<title>9×9 Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the 81-cell grid is the instrument; a work panel beside it (below on phones) edits whichever 3×3 block is selected. */
+:root{
+  --paper:#f6f6f3; --sheet:#ffffff; --ink:#15161a; --muted:#6a6c75; --rule:#d9dad6; --rule-strong:#9fa1a8;
+  --accent:#2a3bd1; --accent-soft:#e6e8fb; --done:#15161a; --done-fg:#ffffff; --pillar:#eceef0; --goal:#15161a; --goal-fg:#ffffff;
+  --danger:#b3261e;
+  --f-display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --f-body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#111216; --sheet:#1a1b20; --ink:#ecedf0; --muted:#9b9da6; --rule:#2c2e35; --rule-strong:#565963;
+  --accent:#8f9bff; --accent-soft:#252a52; --done:#ecedf0; --done-fg:#111216; --pillar:#24262c; --goal:#ecedf0; --goal-fg:#111216; --danger:#ff8a80; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#111216; --sheet:#1a1b20; --ink:#ecedf0; --muted:#9b9da6; --rule:#2c2e35; --rule-strong:#565963;
+  --accent:#8f9bff; --accent-soft:#252a52; --done:#ecedf0; --done-fg:#111216; --pillar:#24262c; --goal:#ecedf0; --goal-fg:#111216; --danger:#ff8a80; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px 48px;display:grid;gap:18px}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;justify-content:space-between}
+.brand{font-family:var(--f-display);font-stretch:75%;font-weight:800;font-size:clamp(26px,5vw,38px);letter-spacing:-.01em;line-height:1;margin:0}
+.brand span{color:var(--accent)}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sel{background:var(--sheet);border:1px solid var(--rule-strong);border-radius:6px;padding:7px 10px;max-width:60vw}
+.btn{background:var(--sheet);border:1px solid var(--rule-strong);border-radius:6px;padding:7px 12px;font-weight:600;font-size:14px;white-space:nowrap}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn.ai{background:var(--accent);color:#fff;border-color:var(--accent)}
+:root[data-theme="dark"] .btn.ai{color:#111216}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.ai{color:#111216}}
+.btn.danger{color:var(--danger);border-color:var(--danger)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.sm{padding:5px 9px;font-size:13px}
+
+.meter{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{flex:1;min-width:140px;height:6px;background:var(--rule);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ink);transition:width .3s}
+.legend{display:flex;gap:12px;flex-wrap:wrap}
+.legend b{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px;border:1px solid var(--rule-strong)}
+
+/* main layout */
+.main{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:900px){.main{grid-template-columns:1fr}}
+
+/* the grid */
+.gridbox{overflow-x:auto}
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;aspect-ratio:1;max-width:100%;min-width:330px;background:var(--rule-strong);padding:6px;border-radius:8px}
+.block{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--rule);border-radius:3px;outline:0 solid var(--accent);transition:outline-width .1s}
+.block.sel{outline-width:3px}
+.cell{position:relative;background:var(--sheet);border:0;padding:3px 4px;text-align:left;display:flex;flex-direction:column;justify-content:flex-start;overflow:hidden;min-width:0;font-size:clamp(8px,1.05vw,12px);line-height:1.15}
+.cell .code{font-family:var(--f-mono);font-size:.78em;color:var(--muted);line-height:1}
+.cell .tx{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:break-word;hyphens:auto;-webkit-hyphens:auto;margin-top:2px}
+.cell.empty .tx{color:var(--rule-strong)}
+.cell.pil{background:var(--pillar);font-weight:700;font-family:var(--f-display);font-stretch:75%;letter-spacing:-.01em}
+.cell.goal{background:var(--goal);color:var(--goal-fg);font-weight:800;font-family:var(--f-display);font-stretch:80%;justify-content:center;text-align:center;font-size:clamp(9px,1.25vw,14px)}
+.cell.goal .code{color:inherit;opacity:.6}
+.cell.s1{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.cell.s2{background:var(--done);color:var(--done-fg)}
+.cell.s2 .code{color:inherit;opacity:.6}
+.cell.s2 .tx{text-decoration:line-through;text-decoration-thickness:1px}
+.cell.hit{box-shadow:inset 0 0 0 2px var(--accent)}
+.cell:hover{filter:brightness(.97)}
+@media (max-width:520px){.cell .tx{-webkit-line-clamp:3}.cell{padding:2px 3px}}
+
+/* panel */
+.panel{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:18px;display:grid;gap:14px;min-width:0}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ptitle{width:100%;border:0;border-bottom:1.5px solid var(--rule);background:transparent;font-family:var(--f-display);font-stretch:80%;font-weight:800;font-size:24px;padding:2px 0 6px;line-height:1.15}
+.ptitle:focus{outline:none;border-color:var(--accent)}
+textarea.ptitle{resize:vertical;min-height:2.6em}
+.rows{display:grid;gap:6px}
+.row{display:grid;grid-template-columns:28px 34px minmax(0,1fr) auto;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--rule)}
+.row:last-child{border-bottom:0}
+.row .code{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.row input[type=text]{border:0;background:transparent;padding:6px 0;min-width:0;width:100%}
+.row input[type=text]:focus{outline:none;box-shadow:0 1.5px 0 var(--accent)}
+.row input[type=date]{border:1px solid var(--rule);border-radius:5px;background:transparent;font-family:var(--f-mono);font-size:12px;padding:3px 4px;width:128px}
+.row.s2 input[type=text]{text-decoration:line-through;color:var(--muted)}
+.row.focus{background:var(--accent-soft);border-radius:4px}
+.st{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--rule-strong);background:transparent;display:grid;place-items:center;padding:0}
+.st.s1{border-color:var(--accent);background:linear-gradient(90deg,var(--accent) 50%,transparent 50%)}
+.st.s2{border-color:var(--ink);background:var(--ink)}
+.st.s2::after{content:"";width:9px;height:5px;border-left:2px solid var(--paper);border-bottom:2px solid var(--paper);transform:rotate(-45deg) translate(1px,-1px)}
+@media (max-width:520px){.row{grid-template-columns:24px 32px minmax(0,1fr)}.row input[type=date]{grid-column:3;width:100%;margin-bottom:4px}}
+.pillrow{grid-template-columns:28px minmax(0,1fr) auto}
+.pillrow .cnt{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pillrow .go{border:0;background:none;color:var(--accent);font-weight:600;font-size:13px;padding:4px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.note{font-size:13px;color:var(--muted);margin:0}
+.note.err{color:var(--danger)}
+.nav{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--rule-strong);background:transparent;border-radius:999px;padding:3px 10px;font-family:var(--f-mono);font-size:12px}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* now strip */
+.now{display:grid;gap:8px}
+.now h2{font-family:var(--f-display);font-stretch:80%;font-size:18px;margin:0}
+.nowlist{display:flex;flex-wrap:wrap;gap:8px}
+.nowitem{border:1.5px solid var(--accent);background:var(--accent-soft);border-radius:6px;padding:6px 10px;text-align:left;max-width:100%}
+.nowitem .code{font-family:var(--f-mono);font-size:11px;color:var(--muted);margin-right:6px}
+.nowitem.late{border-color:var(--danger)}
+.empty-state{border:1.5px dashed var(--rule-strong);border-radius:10px;padding:28px 20px;text-align:center;display:grid;gap:10px;justify-items:center}
+.empty-state h2{font-family:var(--f-display);font-stretch:80%;margin:0;font-size:22px}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.4);display:grid;place-items:center;padding:16px;z-index:5}
+.sheet .card{background:var(--sheet);border-radius:12px;padding:20px;width:min(460px,100%);display:grid;gap:12px}
+.sheet input,.sheet textarea{width:100%;border:1px solid var(--rule-strong);border-radius:6px;padding:8px 10px;background:var(--paper)}
+.sheet label{font-size:13px;font-weight:600;display:grid;gap:4px}
+.status{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+/* guide */
+#app{display:grid;gap:18px;min-width:0;padding-top:6px}
+.steps{display:flex;gap:4px 18px;flex-wrap:wrap;border-bottom:1px solid var(--rule)}
+.step{font-family:var(--f-mono);font-size:12px;letter-spacing:.04em;padding:8px 0;color:var(--muted);border:0;border-bottom:2px solid transparent;background:none;margin-bottom:-1px}
+.step b{font-weight:500;margin-right:6px}
+.step.on{color:var(--ink);border-bottom-color:var(--ink)}
+.step:disabled{cursor:default}
+.guide{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}
+@media (max-width:900px){.guide{grid-template-columns:1fr}}
+.gmain{display:grid;gap:16px;min-width:0}
+.ghead{font-family:var(--f-display);font-stretch:78%;font-weight:800;font-size:clamp(24px,4vw,34px);line-height:1.05;margin:0;text-wrap:balance}
+.glead{margin:0;color:var(--muted);max-width:62ch}
+.dump{width:100%;min-height:300px;border:1.5px solid var(--rule-strong);border-radius:10px;background:var(--sheet);padding:16px;font-size:16px;line-height:1.55;resize:vertical}
+.dump:focus{outline:none;border-color:var(--accent)}
+.prompts{display:flex;flex-wrap:wrap;gap:6px}
+.prompts button{border:1px dashed var(--rule-strong);background:transparent;border-radius:999px;padding:4px 11px;font-size:13px}
+.prompts button:hover{border-style:solid;border-color:var(--ink)}
+.aside{display:grid;gap:12px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+@media (max-width:900px){.aside{position:static}}
+.cov{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:var(--rule-strong);padding:4px;border-radius:8px}
+.cov div{background:var(--sheet);aspect-ratio:1;padding:6px;display:flex;flex-direction:column;justify-content:space-between;font-size:12px;line-height:1.15;font-weight:600;min-width:0}
+.cov div .code{font-family:var(--f-mono);font-size:10px;font-weight:400;color:var(--muted)}
+.cov .partial{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.cov .covered{background:var(--done);color:var(--done-fg)}
+.cov .covered .code{color:inherit;opacity:.6}
+.areas{display:grid;gap:0}
+.area{display:grid;gap:8px;padding:14px 0;border-top:1px solid var(--rule)}
+.area-h{display:flex;gap:10px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}
+.area-h h3{margin:0;font-family:var(--f-display);font-stretch:85%;font-size:17px}
+.area-h h3 .code{font-family:var(--f-mono);font-size:11px;color:var(--muted);font-weight:400;margin-right:8px}
+.pill{font-family:var(--f-mono);font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--rule-strong);color:var(--muted)}
+.pill.partial{border-color:var(--accent);color:var(--accent)}
+.pill.covered{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.area textarea{width:100%;border:1px solid var(--rule);border-radius:6px;background:var(--sheet);padding:8px 10px;resize:vertical;min-height:2.8em;font-size:15px}
+.area textarea:focus{outline:none;border-color:var(--accent)}
+.area .q{margin:0;font-weight:600}
+.area .ans{border-color:var(--accent);background:var(--accent-soft)}
+.prop{display:grid;gap:8px}
+.prop .row{grid-template-columns:28px minmax(0,1fr)}
+.prop .why{grid-column:2;font-size:13px;color:var(--muted);margin:-4px 0 4px}
+.tip{font-size:13px;color:var(--muted);margin:0;border-left:2px solid var(--rule-strong);padding-left:10px}
+details.brief summary{cursor:pointer;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+details.brief dl{margin:8px 0 0;display:grid;gap:6px;font-size:13px}
+details.brief dt{font-weight:700}
+details.brief dd{margin:0;color:var(--muted)}
+/* overview */
+.ov-head{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;justify-content:space-between}
+.ov-head h2{margin:0}
+.sorts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.sorts .eyebrow{margin-right:4px}
+.plist{display:grid;border-top:1px solid var(--rule)}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:6px 20px;padding:14px 4px;border:0;border-bottom:1px solid var(--rule);background:none;text-align:left;align-items:center}
+.prow:hover{background:var(--sheet)}
+.prow h3{margin:0;font-family:var(--f-display);font-stretch:85%;font-size:18px;line-height:1.2}
+.prow .goal{color:var(--muted);font-size:14px;margin:2px 0 0;overflow-wrap:anywhere}
+.prow .meta{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;display:grid;gap:6px}
+.prow .meta .pct{font-size:22px;color:var(--ink);font-family:var(--f-display);font-weight:800;font-stretch:80%}
+.prow .nextup{grid-column:1/-1;font-size:13px;color:var(--muted);margin:0}
+.prow .nextup b{color:var(--ink);font-weight:600}
+.prow .nextup.late b{color:var(--danger)}
+@media (max-width:560px){.prow{grid-template-columns:1fr}}
+.handoff{display:grid;gap:8px;border-top:1px solid var(--rule);padding-top:12px}
+.handoff textarea{width:100%;font-family:var(--f-mono);font-size:12px;border:1px solid var(--rule);border-radius:6px;background:var(--paper);padding:8px;min-height:7em;resize:vertical}
+.notebtn{border:0;background:none;padding:0;font-family:var(--f-mono);font-size:12px;color:var(--muted);text-align:left;cursor:pointer}
+.notebtn.has{color:var(--accent);font-weight:500}
+.noterow{grid-column:3/-1;padding-bottom:6px}
+@media (max-width:520px){.noterow{grid-column:1/-1}}
+.noterow textarea{width:100%;border:1px solid var(--rule);border-radius:6px;background:var(--paper);padding:6px 8px;font-size:14px;min-height:3em;resize:vertical}
+/* app shell */
+.appbar{min-width:0;position:sticky;top:env(safe-area-inset-top,0px);z-index:4;background:var(--paper);border-bottom:1px solid var(--rule);margin:0 -16px;padding:10px 16px}
+.appbar-in{min-width:0;max-width:1240px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.appbar .brand{font-size:24px}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;flex:1;min-width:0}
+.tab{border:0;background:none;padding:7px 11px;border-radius:6px;font-weight:600;font-size:14px;color:var(--muted)}
+.tab:hover{color:var(--ink);background:var(--sheet)}
+.tab.on{color:var(--ink);background:var(--sheet);box-shadow:inset 0 0 0 1px var(--rule-strong)}
+.tab .count{font-family:var(--f-mono);font-size:11px;font-weight:500;margin-left:5px;color:var(--accent)}
+.tab.new{color:var(--accent)}
+@media (max-width:640px){.appbar-in{justify-content:space-between}.tabs{order:3;flex-basis:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.tab{white-space:nowrap}}
+.whoami{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.av{width:22px;height:22px;border-radius:50%;object-fit:cover;flex:none;vertical-align:middle;background:var(--rule)}
+.av.sm{width:18px;height:18px}
+.boardbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+/* owners */
+.own{border:1px dashed var(--rule-strong);background:none;border-radius:999px;padding:2px 9px 2px 3px;font-size:12px;display:inline-flex;align-items:center;gap:5px;max-width:100%;min-width:0;justify-self:start}
+.own span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.own.empty{padding:2px 9px;color:var(--muted)}
+.own.set{border-style:solid}
+.rowmeta{grid-column:3/-1;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+@media (max-width:520px){.rowmeta{grid-column:1/-1}}
+.picker{display:grid;gap:6px;padding:0 0 4px}
+@media (max-width:520px){.picker{grid-column:1/-1}}
+.picker input{border:1px solid var(--rule-strong);border-radius:6px;padding:6px 8px;background:var(--paper);width:100%}
+.picks{display:flex;flex-wrap:wrap;gap:6px}
+.pick{border:1px solid var(--rule-strong);background:var(--sheet);border-radius:999px;padding:3px 10px 3px 3px;display:inline-flex;gap:6px;align-items:center;font-size:13px}
+.pick.on{border-color:var(--accent);background:var(--accent-soft)}
+.pick.none{padding:3px 10px}
+.cell .od{position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%}
+/* my tasks */
+.mine{display:grid;gap:22px}
+.mgroup h3{margin:0 0 6px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.mgroup.late h3{color:var(--danger)}
+.mrow{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--rule)}
+.mrow .open{border:0;background:none;text-align:left;padding:0;min-width:0}
+.mrow .open b{display:block;font-weight:600}
+.mrow .open small{color:var(--muted);font-size:12px}
+.mrow .due{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mrow.late .due{color:var(--danger)}
+/* clickable task rows + task detail */
+.trow{display:grid;grid-template-columns:28px 34px minmax(0,1fr);gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--rule)}
+.trow:last-child{border-bottom:0}
+.trow .code{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.topen{border:0;background:none;text-align:left;padding:4px 6px;margin:-4px -6px;border-radius:6px;min-width:0;display:grid;gap:2px}
+.topen:hover{background:var(--accent-soft)}
+.topen b{font-weight:600;overflow-wrap:anywhere}
+.trow.s2 .topen b{text-decoration:line-through;color:var(--muted)}
+.topen .tg{font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.topen .tg.missing{color:var(--danger)}
+.topen .tm{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.topen .tm .late{color:var(--danger)}
+.topen.add b{color:var(--muted);font-weight:500}
+.crumb{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.crumb button{border:0;background:none;padding:0;color:var(--accent);font:inherit}
+.seg{display:inline-flex;border:1px solid var(--rule-strong);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:none;padding:7px 12px;font-size:13px;font-weight:600;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--rule-strong)}
+.seg button.on{background:var(--ink);color:var(--paper)}
+.seg button.on.s1{background:var(--accent);color:var(--paper)}
+.field{display:grid;gap:6px}
+.field label,.field .lab{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.field textarea,.field input[type=date]{width:100%;border:1px solid var(--rule-strong);border-radius:8px;background:var(--paper);padding:8px 10px;font-size:15px;line-height:1.45;resize:vertical}
+.field input[type=date]{width:auto;font-family:var(--f-mono);font-size:13px}
+.field textarea:focus,.field input:focus{outline:none;border-color:var(--accent)}
+.goalbox textarea{border-color:var(--accent);background:var(--accent-soft);min-height:5.5em}
+.goalbox .hint{font-size:12px;color:var(--muted);margin:0}
+.ttl{width:100%;border:0;border-bottom:1.5px solid var(--rule);background:transparent;font-family:var(--f-display);font-stretch:85%;font-weight:800;font-size:22px;line-height:1.2;padding:2px 0 6px;resize:none;min-height:1.6em}
+.ttl:focus{outline:none;border-color:var(--accent)}
+.tgrid{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:flex-start}
+.pn{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="appbar"><div class="appbar-in">
+    <h1 class="brand">9<span>×</span>9</h1>
+    <nav class="tabs" id="tabs" aria-label="Sections"></nav>
+    <div class="whoami"><span class="status" id="saveStatus"></span><span id="me"></span></div>
+  </div></header>
+
+  <div id="app"></div>
+</div>
+
+<script>
+(() => {
+const POS = [0,1,2,3,5,6,7,8];            // block/cell positions around the centre
+const L = "ABCDEFGH";
+const idxOf = p => p < 4 ? p : p - 1;
+const blankPlan = (name, goal) => ({ name: name || "Untitled plan", goal: goal || "",
+  pillars: Array.from({length:8}, () => ({ title:"", tasks: Array.from({length:8}, () => ({t:"",s:0,due:"",n:"",g:"",o:"",by:"",at:0})) })),
+  log: {}, updatedAt: Date.now() });
+const AREAS = [
+  {k:"outcome",  t:"Outcome",           q:"What does done look like? Put a number and a date on it."},
+  {k:"audience", t:"Who it's for",      q:"Who will use it, buy it or benefit from it first?"},
+  {k:"problem",  t:"Problem",           q:"What pain does it solve, and why now?"},
+  {k:"offer",    t:"What you'll build", q:"What exactly are you building, launching or delivering?"},
+  {k:"value",    t:"Money & value",     q:"How does it make money or create value?"},
+  {k:"resources",t:"Resources",         q:"What team, budget and time do you have?"},
+  {k:"partners", t:"Partners",          q:"Who do you depend on, or need on board?"},
+  {k:"risks",    t:"Risks",             q:"What could stop this? Rules, competitors, unknowns."},
+  {k:"first",    t:"Next 30 days",      q:"What has to happen in the next 30 days?"}];
+const DEFAULT_PILLARS = ["Audience","Product","Business model","Partners","Marketing","Team","Funding","Legal & ops"];
+const blankDraft = () => ({ step:1, dump:"", title:"", analysed:false,
+  areas: Object.fromEntries(AREAS.map(a => [a.k, {status:"missing", note:"", q:"", a:""}])), proposal:null });
+const uid = () => Math.random().toString(36).slice(2,10);
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+let plans = {};          // id -> plan
+let cur = null;          // current plan id
+let sel = 4;             // selected block (4 = centre)
+let focusTask = null;    // [pillar, task] highlighted
+let db = null, sample = null, unsub = null;
+const dirty = new Set(); const timers = {};
+let ready = false, aiBusy = false, aiMsg = "", aiErr = false, confirmDel = false;
+let view = lsGet0("nxn-view") || "list";
+let user = null, me = null, people = [], profs = {}, ownPick = false, ownHits = [];
+const synced = {}, legacy = new Set(), chain = {}, latest = {};
+let draft = (() => { try { const d = JSON.parse(lsGet0("nxn-draft")||"null"); if (d && d.areas) return Object.assign(blankDraft(), d); } catch(e){} return blankDraft(); })();
+const ARTIFACT_URL = "{{PLANNER_URL}}"; // the skill fills this in after the first publish
+let ovSort = lsGet0("nxn-sort") || "progress", openNote = null, showHand = false;
+let gBusy = false, gMsg = "", gErr = false, draftTimer = null;
+function lsGet0(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+function saveDraft(){ clearTimeout(draftTimer); draftTimer = setTimeout(() => { try { localStorage.setItem("nxn-draft", JSON.stringify(draft)); } catch(e){} }, 400); }
+function setView(v){ view = v; try { localStorage.setItem("nxn-view", v); } catch(e){} render(); window.scrollTo(0,0); }
+
+function normalize(p){
+  const b = blankPlan(p.name, p.goal);
+  const pls = Array.isArray(p.pillars) ? p.pillars : L.split("").map(k => p.pillars && p.pillars[k]);
+  pls.slice(0,8).forEach((pl,i) => { if (!pl) return;
+    b.pillars[i].title = String(pl.title || "");
+    const ts = Array.isArray(pl.tasks) ? pl.tasks : [1,2,3,4,5,6,7,8].map(n => pl.tasks && pl.tasks[n]);
+    ts.slice(0,8).forEach((t,j) => { if (!t) return; b.pillars[i].tasks[j] = {t:String(t.t||""), s:[0,1,2].includes(t.s)?t.s:0, due:String(t.due||""), n:String(t.n||"").slice(0,4000), g:String(t.g||"").slice(0,2000), o:String(t.o||""), by:String(t.by||""), at:+t.at||0}; });
+  });
+  if (p.brief && typeof p.brief === "object"){
+    const a = {}; AREAS.forEach(x => { const v = p.brief.areas && p.brief.areas[x.k]; if (v) a[x.k] = String(v).slice(0,2000); });
+    b.brief = { dump: String(p.brief.dump||"").slice(0,20000), areas: a };
+  }
+  b.log = {};
+  if (p.log && typeof p.log === "object") Object.entries(p.log).forEach(([k,v]) => { if (v && typeof v === "object") b.log[k] = { at:+v.at||0, c:String(v.c||"").slice(0,4), m:String(v.m||"").slice(0,500), by:String(v.by||"") }; });
+  b.updatedAt = p.updatedAt || Date.now();
+  return b;
+}
+
+/* ---------- storage ---------- */
+function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+function lsSet(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+function isTyping(){ const a=document.activeElement; return !!(a && a.closest && a.closest("#app") && ["INPUT","TEXTAREA"].includes(a.tagName)); }
+function setStatus(t){ $("#saveStatus").textContent = t; }
+
+function persist(id){
+  plans[id].updatedAt = Date.now();
+  dirty.add(id);
+  setStatus("Saving…");
+  if (timers[id]) clearTimeout(timers[id].t);
+  const h = {done:false}; h.t = setTimeout(() => { h.done = true; flush(id); }, 700); timers[id] = h;
+}
+// stored shape: pillars keyed A–H, tasks keyed 1–8, so a change to one task merges without touching the rest
+function toStore(p){
+  const o = { name:p.name, goal:p.goal, updatedAt:p.updatedAt, pillars:{} };
+  p.pillars.forEach((pl,i) => { const t = {}; pl.tasks.forEach((x,j) => { t[j+1] = {t:x.t, s:x.s, due:x.due, n:x.n, g:x.g, o:x.o, by:x.by, at:x.at}; }); o.pillars[L[i]] = {title:pl.title, tasks:t}; });
+  if (p.brief) o.brief = JSON.parse(JSON.stringify(p.brief));
+  o.log = JSON.parse(JSON.stringify(p.log || {}));
+  return o;
+}
+const isObj = v => v && typeof v === "object" && !Array.isArray(v);
+function diff(a,b){
+  const out = {};
+  for (const k in b){
+    if (isObj(a && a[k]) && isObj(b[k])){ const d = diff(a[k], b[k]); if (Object.keys(d).length) out[k] = d; }
+    else if (JSON.stringify(a ? a[k] : undefined) !== JSON.stringify(b[k])) out[k] = b[k];
+  }
+  return out;
+}
+function flush(id){ chain[id] = (chain[id] || Promise.resolve()).then(() => flushNow(id)); return chain[id]; }
+async function flushNow(id){
+  const p = plans[id]; if (!p) { dirty.delete(id); return; }
+  if (db){
+    const ref = db.collection("plans").doc(id), st = toStore(p);
+    try {
+      if (!synced[id] || legacy.has(id)) { await ref.set(st); legacy.delete(id); }
+      else { const d = diff(synced[id], st); if (Object.keys(d).length) { try { await ref.update(d); } catch(e){ if (e && e.code === "invalid_argument") await ref.set(st); else throw e; } } }
+      synced[id] = st; setStatus("Saved");
+    } catch(e){ setStatus("Not saved — " + (e && e.code === "permission_denied" ? "you can view this plan but not edit it" : "check your connection")); }
+  } else { lsSet("nxn-plans", JSON.stringify(plans)); setStatus("Saved on this device"); }
+  if (!timers[id] || timers[id].done) dirty.delete(id);
+}
+async function removePlan(id){
+  delete plans[id]; delete synced[id];
+  if (db){ try { await db.collection("plans").doc(id).delete(); } catch(e){} }
+  else lsSet("nxn-plans", JSON.stringify(plans));
+  cur = Object.keys(plans).sort((a,b)=>plans[b].updatedAt-plans[a].updatedAt)[0] || null;
+  sel = 4; confirmDel = false; render();
+}
+async function createPlan(name, goal, extra){
+  const id = uid(); const p = blankPlan(name, goal);
+  if (extra){ if (extra.pillars) extra.pillars.forEach((t,i)=>{ if (i<8) p.pillars[i].title = t; }); if (extra.brief) p.brief = extra.brief; }
+  plans[id] = p; cur = id; sel = 4; focusTask = null;
+  lsSet("nxn-cur", id); persist(id); await flush(id);
+  view = "board"; lsSet("nxn-view","board"); render();
+  return id;
+}
+
+/* ---------- people ---------- */
+function pname(id){ if (!id) return ""; if (me && id === me.id) return "You"; return (profs[id] && profs[id].name) || "Someone"; }
+function pfirst(id){ const n = pname(id); return n === "Someone" || n === "You" ? n : n.split(" ")[0]; }
+function avatar(id, cls){ const p = profs[id] || (me && id === me.id ? me : null); return p && p.avatarUrl ? `<img class="av ${cls||""}" alt="" src="${esc(p.avatarUrl)}">` : `<span class="av ${cls||""}"></span>`; }
+function idsInState(){ const s = new Set(people); Object.values(plans).forEach(p => { p.pillars.forEach(pl => pl.tasks.forEach(t => { if (t.o) s.add(t.o); if (t.by) s.add(t.by); })); Object.values(p.log||{}).forEach(e => { if (e.by) s.add(e.by); }); }); return [...s]; }
+let profBusy = false;
+async function ensureProfiles(){
+  if (!user || profBusy) return;
+  const want = idsInState().filter(i => !profs[i]); if (!want.length) return;
+  profBusy = true;
+  try { Object.assign(profs, await user.profiles(want)); } catch(e){}
+  profBusy = false;
+  if (!isTyping()) render();
+}
+const myTasks = () => { const out = []; if (!me || !me.id) return out;
+  Object.entries(plans).forEach(([pid,p]) => p.pillars.forEach((pl,i) => pl.tasks.forEach((t,j) => { if (t.t && t.o === me.id && t.s !== 2) out.push({pid,p,i,j,t}); }))); return out; };
+
+/* ---------- progress ---------- */
+const SNAME = ["To do","In progress","Done"];
+function logEvent(p, c, m){ p.log = p.log || {}; const at = Date.now(); p.log[at + "-" + uid().slice(0,4)] = { at, c, m, by: (me && me.id) || "" }; }
+function stats(p, i){
+  const ts = (i==null ? p.pillars.flatMap(x=>x.tasks) : p.pillars[i].tasks).filter(t=>t.t.trim());
+  return { total: ts.length, done: ts.filter(t=>t.s===2).length, doing: ts.filter(t=>t.s===1).length };
+}
+const today = () => new Date().toISOString().slice(0,10);
+
+/* ---------- render ---------- */
+function renderTabs(){
+  const n = myTasks().length, hasCur = !!(cur && plans[cur]);
+  const t = [["list","Plans",""],["mine","My tasks", n?`<span class="count">${n}</span>`:""]];
+  if (hasCur) t.push(["board", plans[cur].name.length > 22 ? plans[cur].name.slice(0,21)+"…" : plans[cur].name, ""]);
+  $("#tabs").innerHTML = t.map(([v,l,x]) => `<button class="tab${view===v?" on":""}" data-view="${v}" ${view===v?'aria-current="page"':""}>${esc(l)}${x}</button>`).join("")
+    + `<button class="tab new${view==="guide"?" on":""}" data-view="guide">+ New plan</button>`;
+  document.querySelectorAll("[data-view]").forEach(b => b.onclick = () => { if (b.dataset.view === "guide") openNew(); else { openNote=null; ownPick=false; showHand=false; setView(b.dataset.view); } });
+  $("#me").innerHTML = me && me.id ? `${avatar(me.id)}` : "";
+  if (me && me.id) $("#me").title = (me.name || "You");
+}
+function render(){
+  const ids = Object.keys(plans).sort((a,b)=>plans[b].updatedAt-plans[a].updatedAt);
+  renderTabs();
+  const app = $("#app");
+  if (view === "mine"){ if (!ready){ app.innerHTML = `<p class="note">Loading your tasks…</p>`; return; } renderMine(app); return; }
+  if (view === "guide"){ renderGuide(app); return; }
+  if (view === "list"){ if (!ready){ app.innerHTML = `<p class="note">Loading your plans…</p>`; return; } renderList(app, ids); return; }
+  if (!ready){ app.innerHTML = `<p class="note">Loading your boards…</p>`; return; }
+  if (!cur || !plans[cur]){
+    app.innerHTML = `<div class="empty-state"><h2>No plans yet</h2>
+      <p class="note">Put one goal in the centre, break it into 8 pillars, and each pillar into 8 actions. 64 tasks you can tick off.</p>
+      <button class="btn primary" id="emptyNew">Start a plan</button></div>`;
+    $("#emptyNew").onclick = openNew; return;
+  }
+  const p = plans[cur], s = stats(p), pct = s.total ? Math.round(s.done/s.total*100) : 0;
+
+  let board = "";
+  for (let b=0;b<9;b++){
+    let cells = "";
+    for (let c=0;c<9;c++){
+      let cls="cell", code="", tx="", data=`data-b="${b}" data-c="${c}"`;
+      if (b===4 && c===4){ cls+=" goal"; code="GOAL"; tx=p.goal||"Your goal"; }
+      else if (b===4 || c===4){ const i = idxOf(b===4?c:b); const t=p.pillars[i].title;
+        cls+=" pil"+(t?"":" empty"); code=L[i]; tx=t||"Pillar "+L[i]; }
+      else { const i=idxOf(b), j=idxOf(c), t=p.pillars[i].tasks[j];
+        cls+=(t.t?"":" empty")+(t.t?" s"+t.s:""); code=L[i]+(j+1); tx=t.t||"—";
+        if (focusTask && focusTask[0]===i && focusTask[1]===j) cls+=" hit"; }
+      const od = (b!==4 && c!==4) ? p.pillars[idxOf(b)].tasks[idxOf(c)].o : "";
+      cells += `<button class="${cls}" ${data} aria-label="${esc(code+": "+tx+(od?", owner "+pname(od):""))}"><span class="code">${code}</span><span class="tx">${esc(tx)}</span>${od?`<i class="od" style="background:${esc((profs[od]&&profs[od].color)||"var(--accent)")}"></i>`:""}</button>`;
+    }
+    board += `<div class="block${b===sel?" sel":""}">${cells}</div>`;
+  }
+
+  // in-progress / overdue strip
+  const now = []; const td = today();
+  p.pillars.forEach((pl,i)=>pl.tasks.forEach((t,j)=>{ if (t.t && t.s!==2 && (t.s===1 || (t.due && t.due<=td))) now.push({i,j,t,late:t.due&&t.due<td}); }));
+  now.sort((a,b)=>(a.t.due||"9")<(b.t.due||"9")?-1:1);
+
+  app.innerHTML = `
+  <div class="boardbar"><select id="planSel" class="sel" aria-label="Switch plan">${ids.map(id => `<option value="${id}" ${id===cur?"selected":""}>${esc(plans[id].name)}</option>`).join("")}</select></div>
+  <div class="meter"><span>${s.done}/${s.total} done · ${s.doing} in progress · ${pct}% · ${p.pillars.flatMap(x=>x.tasks).filter(t=>t.t.trim()&&t.g.trim()).length}/${s.total} with a goal</span><div class="bar"><i style="width:${pct}%"></i></div>
+    <span class="legend"><span><b></b>To do</span><span><b style="background:var(--accent-soft);border-color:var(--accent)"></b>In progress</span><span><b style="background:var(--done);border-color:var(--done)"></b>Done</span></span></div>
+  <div class="main">
+    <div class="gridbox"><div class="board" id="board" lang="${esc((navigator.language||"en").slice(0,5))}">${board}</div></div>
+    <section class="panel" id="panel">${sel===4 ? centrePanel(p) : pillarPanel(p, idxOf(sel))}</section>
+  </div>
+  ${now.length ? `<section class="now"><h2>On the desk</h2><div class="nowlist">${now.map(n=>`<button class="nowitem${n.late?" late":""}" data-i="${n.i}" data-j="${n.j}"><span class="code">${L[n.i]}${n.j+1}${n.t.due?" · "+n.t.due:""}</span>${esc(n.t.t)}</button>`).join("")}</div></section>`:""}`;
+  wire(p);
+}
+
+function nav(){
+  return `<div class="nav"><button class="chip${sel===4?" on":""}" data-nav="4">Goal</button>${POS.map((b,i)=>`<button class="chip${sel===b?" on":""}" data-nav="${b}">${L[i]}</button>`).join("")}</div>`;
+}
+function aiLine(){ return aiMsg ? `<p class="note${aiErr?" err":""}">${esc(aiMsg)}</p>` : ""; }
+
+function activityHTML(p){
+  const ev = Object.values(p.log||{}).sort((a,b)=>b.at-a.at).slice(0,12);
+  if (!ev.length) return "";
+  return `<details class="brief" open><summary>Activity · from the app and every Claude chat</summary><dl>${ev.map(e=>`<dt>${e.c?esc(e.c)+" · ":""}${esc(e.m)}</dt><dd>${e.by?esc(pname(e.by)):"Claude"} · ${new Date(e.at).toLocaleString([], {day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</dd>`).join("")}</dl></details>`;
+}
+function centrePanel(p){
+  return `${nav()}
+    <div><div class="eyebrow">Plan name</div><input class="ptitle" style="font-size:16px;font-weight:600" id="pname" value="${esc(p.name)}"></div>
+    <div><div class="eyebrow">Goal · centre</div><textarea class="ptitle" id="goal" rows="2" placeholder="e.g. Launch the mobile app to 1,000 paying users by June">${esc(p.goal)}</textarea></div>
+    ${p.brief && Object.keys(p.brief.areas).length ? `<details class="brief"><summary>Brief</summary><dl>${AREAS.filter(a=>p.brief.areas[a.k]).map(a=>`<dt>${esc(a.t)}</dt><dd>${esc(p.brief.areas[a.k])}</dd>`).join("")}</dl></details>` : ""}
+    <div class="eyebrow">Pillars</div>
+    <div class="rows">${p.pillars.map((pl,i)=>{ const st=stats(p,i); return `<div class="row pillrow"><span class="code">${L[i]}</span><input type="text" data-pil="${i}" value="${esc(pl.title)}" placeholder="Pillar ${L[i]} (e.g. Audience)"><span><span class="cnt">${st.done}/${st.total}</span> <button class="go" data-nav="${POS[i]}">Open</button></span></div>`;}).join("")}</div>
+    <div class="actions">${sample?`<button class="btn ai" id="aiAll" ${aiBusy?"disabled":""}>${aiBusy?"Drafting…":"Fill empty cells with Claude"}</button>`:""}
+      ${confirmDel?`<button class="btn danger" id="delYes">Delete “${esc(p.name)}”</button><button class="btn" id="delNo">Keep</button>`:`<button class="btn sm" id="delBtn">Delete plan</button>`}</div>
+    ${aiLine()}
+    ${sample?`<p class="note">Claude only writes into empty cells. Anything you've typed stays as is.</p>`:""}
+    ${activityHTML(p)}
+    <div class="handoff"><div class="eyebrow">Work on this plan in another chat</div>
+      <div class="actions"><button class="btn primary" id="handBtn">Copy hand-off for Claude</button></div>
+      ${showHand?`<textarea id="handTx" readonly>${esc(handoffText(p))}</textarea><p class="note" id="handMsg">Paste this into any Claude chat. Claude opens this plan, works through the open actions with you, and ticks them off here.</p>`:""}
+    </div>`;
+}
+
+function pillarPanel(p,i){
+  if (focusTask && focusTask[0]===i) return taskPanel(p,i,focusTask[1]);
+  const pl=p.pillars[i], st=stats(p,i), td=today();
+  const withGoal = pl.tasks.filter(t=>t.t.trim()&&t.g.trim()).length;
+  return `${nav()}
+    <div><div class="eyebrow">Pillar ${L[i]} · ${st.done}/${st.total} done · ${withGoal}/${st.total} with a goal</div>
+    <input class="ptitle" id="ptitle" value="${esc(pl.title)}" placeholder="Name this pillar"></div>
+    <div class="rows">${pl.tasks.map((t,j)=>`<div class="trow s${t.s}">
+      <span class="code">${L[i]}${j+1}</span>
+      ${t.t?`<button class="st s${t.s}" data-st="${j}" aria-label="Status: ${["to do","in progress","done"][t.s]}. Change"></button>`:`<span></span>`}
+      <button class="topen${t.t?"":" add"}" data-topen="${j}">
+        <b>${t.t?esc(t.t):"+ Add action "+(j+1)}</b>
+        ${t.t?`<span class="tg${t.g?"":" missing"}">${t.g?"Goal: "+esc(t.g):"No goal yet"}</span>`:""}
+        ${t.t&&(t.o||t.due||t.n)?`<span class="tm">${t.o?`<span>${avatar(t.o,"sm")} ${esc(pfirst(t.o))}</span>`:""}${t.due?`<span class="${t.s!==2&&t.due<td?"late":""}">Due ${t.due}</span>`:""}${t.n?"<span>Has notes</span>":""}</span>`:""}
+      </button>
+    </div>`).join("")}</div>
+    <div class="actions">${sample?`<button class="btn ai" id="aiPil" ${aiBusy?"disabled":""}>${aiBusy?"Drafting…":"Fill actions and goals with Claude"}</button>`:""}
+      <button class="btn sm" data-nav="4">Back to goal</button></div>
+    ${aiLine()}`;
+}
+
+function taskPanel(p,i,j){
+  const pl=p.pillars[i], t=pl.tasks[j];
+  const prev = j>0 ? j-1 : null, next = j<7 ? j+1 : null;
+  return `<div class="crumb"><button data-nav="4">Goal</button>›<button data-back="1">${L[i]} · ${esc(pl.title||"Pillar "+L[i])}</button>›<span>${L[i]}${j+1}</span></div>
+    <textarea class="ttl" id="tt" rows="1" placeholder="What is the action? Start with a verb">${esc(t.t)}</textarea>
+    <div class="field goalbox"><label for="tg">Goal · what done looks like</label>
+      <textarea id="tg" placeholder="e.g. 3 personas written, each with role, main pain and buying trigger, reviewed with sales">${esc(t.g)}</textarea>
+      <p class="hint">Make it checkable: a result, a number or a deliverable, so anyone can tell when this is finished.</p>
+      ${sample?`<div class="actions"><button class="btn ai sm" id="aiGoal" ${aiBusy||!t.t.trim()?"disabled":""}>${aiBusy?"Writing…":t.g?"Sharpen goal with Claude":"Write goal with Claude"}</button></div>`:""}
+      ${aiLine()}
+    </div>
+    <div class="field"><span class="lab">Status</span><div class="seg" role="group" aria-label="Status">${["To do","In progress","Done"].map((l,k)=>`<button class="${t.s===k?"on s"+k:""}" data-set-s="${k}" aria-pressed="${t.s===k}">${l}</button>`).join("")}</div>
+      ${t.by&&t.at?`<span class="note">Last changed by ${esc(pname(t.by))}, ${new Date(t.at).toLocaleDateString()}</span>`:""}</div>
+    <div class="tgrid">
+      ${user?`<div class="field"><span class="lab">Owner</span><button class="own ${t.o?"set":"empty"}" data-own="1">${t.o?`${avatar(t.o,"sm")}<span>${esc(pname(t.o))}</span>`:"+ Assign owner"}</button></div>`:""}
+      <div class="field"><label for="tdue">Due</label><input type="date" id="tdue" value="${esc(t.due)}"></div>
+    </div>
+    ${ownPick?pickerHTML(t):""}
+    <div class="field"><label for="tn">Notes · results, links, decisions, blockers</label><textarea id="tn" rows="3">${esc(t.n)}</textarea></div>
+    <div class="pn"><button class="btn sm" data-tgo="${prev??""}" ${prev==null?"disabled":""}>‹ ${prev!=null?L[i]+(prev+1):""}</button>
+      <button class="btn sm" data-back="1">All ${L[i]} actions</button>
+      <button class="btn sm" data-tgo="${next??""}" ${next==null?"disabled":""}>${next!=null?L[i]+(next+1):""} ›</button></div>`;
+}
+
+function pickerHTML(t){
+  const ids = [...new Set([...(me&&me.id?[me.id]:[]), ...people, ...ownHits.map(h=>h.id)])];
+  return `<div class="picker"><input id="ownQ" type="search" placeholder="Search your team by name" autocomplete="off">
+    <div class="picks">${ids.map(id=>`<button class="pick${t.o===id?" on":""}" data-pickid="${esc(id)}">${avatar(id,"sm")}${esc(pname(id))}</button>`).join("")}${t.o?`<button class="pick none" data-pickid="">Unassign</button>`:""}</div>
+    ${people.length<2?`<p class="note">Teammates appear here once they have opened the planner. Share it with them from the Share menu.</p>`:""}</div>`;
+}
+function wire(p){
+  const ps=$("#planSel"); if (ps) ps.onchange = onPlanSel;
+  document.querySelectorAll("#board .cell").forEach(el => el.onclick = () => {
+    const b=+el.dataset.b, c=+el.dataset.c;
+    if (b===4 && c!==4){ sel = POS[idxOf(c)]; focusTask=null; }
+    else { sel=b; focusTask = (b!==4 && c!==4) ? [idxOf(b), idxOf(c)] : null; }
+    aiMsg=""; ownPick=false; render();
+    if (focusTask && window.innerWidth<900) document.getElementById("panel").scrollIntoView({behavior:"smooth",block:"start"});
+    if (focusTask){ const tt=$("#tt"); if (tt && !tt.value) tt.focus({preventScroll:true}); }
+  });
+  document.querySelectorAll("[data-nav]").forEach(el => el.onclick = () => { sel=+el.dataset.nav; focusTask=null; aiMsg=""; openNote=null; ownPick=false; showHand=false; render(); });
+  document.querySelectorAll(".nowitem").forEach(el => el.onclick = () => { const i=+el.dataset.i; sel=POS[i]; focusTask=[i,+el.dataset.j]; ownPick=false; aiMsg=""; render(); const pn=$("#panel"); if (pn && window.innerWidth<900) pn.scrollIntoView({behavior:"smooth",block:"start"}); });
+  const soft = () => { refreshBoardOnly(); persist(cur); };
+  if (sel===4){
+    $("#pname").oninput = e => { p.name=e.target.value||"Untitled plan"; persist(cur); const o=$("#planSel").selectedOptions[0]; if(o) o.textContent=p.name; };
+    $("#pname").onblur = () => renderTabs();
+    $("#goal").oninput = e => { p.goal=e.target.value; soft(); };
+    document.querySelectorAll("[data-pil]").forEach(el => el.oninput = e => { p.pillars[+el.dataset.pil].title=e.target.value; soft(); });
+    const ai=$("#aiAll"); if (ai) ai.onclick = () => generate(null);
+    $("#handBtn").onclick = async () => { showHand=true; render(); const tx=$("#handTx");
+      try { await navigator.clipboard.writeText(tx.value); $("#handMsg").textContent="Copied. Paste it into any Claude chat. Claude opens this plan, works through the open actions with you, and ticks them off here."; }
+      catch(e){ tx.focus(); tx.select(); $("#handMsg").textContent="Copying is blocked here, so the text is selected. Copy it and paste it into any Claude chat."; } };
+    const d=$("#delBtn"); if (d) d.onclick = () => { confirmDel=true; render(); };
+    const y=$("#delYes"); if (y) y.onclick = () => removePlan(cur);
+    const n=$("#delNo"); if (n) n.onclick = () => { confirmDel=false; render(); };
+  } else {
+    const i=idxOf(sel), pl=p.pillars[i];
+    const openTask = j => { focusTask=[i,j]; ownPick=false; ownHits=[]; aiMsg=""; render(); const pn=$("#panel"); if (pn && window.innerWidth<900) pn.scrollIntoView({behavior:"smooth",block:"start"}); const tt=$("#tt"); if (tt && !tt.value) tt.focus({preventScroll:true}); };
+    document.querySelectorAll("[data-back]").forEach(el => el.onclick = () => { focusTask=null; ownPick=false; aiMsg=""; render(); });
+    if (focusTask && focusTask[0]===i){
+      const j=focusTask[1], t=pl.tasks[j];
+      const grow = el => { el.style.height="auto"; el.style.height=el.scrollHeight+"px"; };
+      const tt=$("#tt"); grow(tt);
+      tt.oninput = e => { t.t=e.target.value.replace(/\n/g," "); grow(tt); soft(); const b=$("#aiGoal"); if (b) b.disabled = aiBusy || !t.t.trim(); };
+      $("#tg").oninput = e => { t.g=e.target.value; persist(cur); };
+      $("#tn").oninput = e => { t.n=e.target.value; persist(cur); };
+      $("#tdue").onchange = e => { t.due=e.target.value; persist(cur); render(); };
+      document.querySelectorAll("[data-set-s]").forEach(el => el.onclick = () => { const v=+el.dataset.setS; if (t.s===v) return; t.s=v; t.by=(me&&me.id)||""; t.at=Date.now(); logEvent(p, L[i]+(j+1), "Status → "+SNAME[v]); persist(cur); render(); });
+      document.querySelectorAll("[data-tgo]").forEach(el => el.onclick = () => { if (el.dataset.tgo!=="") openTask(+el.dataset.tgo); });
+      const own=document.querySelector("[data-own]"); if (own) own.onclick = () => { ownPick=!ownPick; ownHits=[]; render(); const q=$("#ownQ"); if (q) q.focus(); };
+      const q=$("#ownQ"); if (q && user){ q.oninput = async e => { const hits = await user.search(e.target.value); ownHits = hits; hits.forEach(h=>{ profs[h.id]=h; }); const box=q.parentElement.querySelector(".picks"); if (box){ const tmp=document.createElement("div"); tmp.innerHTML=pickerHTML(t); box.replaceWith(tmp.querySelector(".picks")); wirePicks(t); } }; }
+      wirePicks(t);
+      const ag=$("#aiGoal"); if (ag) ag.onclick = () => writeGoal(i,j);
+    } else {
+      $("#ptitle").oninput = e => { pl.title=e.target.value; soft(); };
+      document.querySelectorAll("[data-st]").forEach(el => el.onclick = () => { const t=pl.tasks[+el.dataset.st]; t.s=(t.s+1)%3; t.by=(me&&me.id)||""; t.at=Date.now(); logEvent(p, L[i]+(+el.dataset.st+1), "Status → "+SNAME[t.s]); persist(cur); render(); });
+      document.querySelectorAll("[data-topen]").forEach(el => el.onclick = () => openTask(+el.dataset.topen));
+      const ai=$("#aiPil"); if (ai) ai.onclick = () => generate(i);
+    }
+  }
+}
+
+function wirePicks(t){
+  document.querySelectorAll("[data-pickid]").forEach(b => b.onclick = () => { t.o=b.dataset.pickid; ownPick=false; ownHits=[]; persist(cur); render(); });
+}
+// update the grid text while typing without stealing focus from the panel
+function refreshBoardOnly(){
+  const p=plans[cur];
+  document.querySelectorAll("#board .cell").forEach(el=>{
+    const b=+el.dataset.b, c=+el.dataset.c; let tx;
+    if (b===4&&c===4) tx=p.goal||"Your goal";
+    else if (b===4||c===4){ const i=idxOf(b===4?c:b); tx=p.pillars[i].title||"Pillar "+L[i]; el.classList.toggle("empty",!p.pillars[i].title); }
+    else { const t=p.pillars[idxOf(b)].tasks[idxOf(c)]; tx=t.t||"—"; el.classList.toggle("empty",!t.t); }
+    el.querySelector(".tx").textContent=tx;
+  });
+}
+
+/* ---------- Claude drafting ---------- */
+async function generate(pi){
+  const id=cur; let p=plans[id];
+  if (!p.goal.trim()){ aiMsg="Write the goal in the centre first."; aiErr=true; render(); return; }
+  aiBusy=true; aiMsg="Claude is drafting. This can take up to a minute."; aiErr=false; render();
+  const current = { goal:p.goal, pillars:p.pillars.map((pl,i)=>({letter:L[i], title:pl.title, tasks:pl.tasks.map(t=>({t:t.t, g:t.g}))})) };
+  const scope = pi==null
+    ? "Fill every empty pillar title, every empty task t, and every empty goal g across all 8 pillars."
+    : `Only work on pillar ${L[pi]}${p.pillars[pi].title?` ("${p.pillars[pi].title}")`:""}: fill its title if empty, its empty tasks t and its empty goals g. Return the other pillars unchanged.`;
+  const prompt = `You are helping build a 9x9 (Mandala chart / Harada method) plan. The centre is one goal. Around it are 8 pillars: the core areas that must all succeed for the goal to happen (for a product launch these are things like Audience, Product, Business model, Partners, Marketing, Team, Funding, Legal/Operations — adapt them to the goal). Each pillar has 8 concrete actions that can each be finished and ticked off.
+
+${p.brief && Object.keys(p.brief.areas).length ? "Background brief from the owner (use it to make tasks specific to their situation):\n" + AREAS.filter(a=>p.brief.areas[a.k]).map(a=>"- "+a.t+": "+p.brief.areas[a.k]).join("\n") + "\n\n" : ""}Current plan as JSON (empty strings are blank cells):
+${JSON.stringify(current)}
+
+${scope}
+Rules: keep every non-empty value exactly as given. Pillar titles: 1-3 words. Tasks (t): concrete, verb-first, at most 8 words, specific to this goal, no numbering. Goals (g): one sentence, max 25 words, saying what done looks like for that task: a checkable result, number or deliverable, never a restatement of the task. Write in the same language as the goal. Pillars must not overlap. Order each pillar's tasks roughly in the order they should be done.
+
+Reply with JSON only, exactly: {"pillars":[{"title":"...","tasks":[{"t":"...","g":"..."} x8]} x8]}`;
+  try {
+    const out = await sample.json(prompt, { modelTier:"default" });
+    p=plans[id]; if (!p) throw {code:"gone"};
+    let filled=0;
+    (out.pillars||[]).slice(0,8).forEach((np,i)=>{
+      if (pi!=null && i!==pi) return;
+      const pl=p.pillars[i];
+      if (!pl.title.trim() && np.title){ pl.title=String(np.title).slice(0,60); filled++; }
+      (np.tasks||[]).slice(0,8).forEach((x,j)=>{ const nt = typeof x==="string" ? {t:x,g:""} : (x||{}); const ct = pl.tasks[j];
+        if (!ct.t.trim() && nt.t){ ct.t=String(nt.t).slice(0,120); filled++; }
+        if (ct.t.trim() && !ct.g.trim() && nt.g){ ct.g=String(nt.g).slice(0,400); filled++; } });
+    });
+    aiMsg = filled ? `Added ${filled} item${filled>1?"s":""} (actions and goals). Open any action to edit it.` : "Nothing was empty, so nothing changed.";
+    aiErr=false; if (filled) persist(id);
+  } catch(e){
+    aiErr=true;
+    aiMsg = e && e.code==="not_granted" ? "Claude drafting is turned off for this page. You can still fill the grid by hand."
+          : e && e.code==="rate_limited" ? "Too many requests right now. Try again in a minute."
+          : "Claude couldn't draft this time. Try again, or fill the cells by hand.";
+  }
+  aiBusy=false; render();
+}
+
+async function writeGoal(i,j){
+  const id=cur, p=plans[id], pl=p.pillars[i], t=pl.tasks[j];
+  aiBusy=true; aiMsg="Claude is writing the goal…"; aiErr=false; render();
+  const prompt = `Write the definition of done for one action in a 9x9 project plan.
+Plan goal: ${p.goal}
+Pillar ${L[i]}: ${pl.title}
+Other actions in this pillar: ${pl.tasks.filter((x,k)=>k!==j&&x.t).map(x=>x.t).join("; ")}
+${p.brief&&Object.keys(p.brief.areas).length?"Brief: "+AREAS.filter(a=>p.brief.areas[a.k]).map(a=>a.t+": "+p.brief.areas[a.k]).join(" | ")+"\n":""}Action: ${t.t}
+${t.g?"Current goal (sharpen it, keep its intent): "+t.g+"\n":""}${t.n?"Notes so far: "+t.n+"\n":""}
+Write ONE sentence, max 25 words, in the language of the action, stating what done looks like: a checkable result, number or deliverable that anyone could verify. Do not restate the action.
+Reply with JSON only: {"g":"..."}`;
+  try {
+    const out = await sample.json(prompt, { modelTier:"quick" });
+    const q = plans[id] && plans[id].pillars[i].tasks[j];
+    if (q && out && out.g){ q.g = String(out.g).slice(0,400); persist(id); aiMsg="Goal written. Edit it if it doesn't fit."; aiErr=false; }
+    else { aiMsg="Claude didn't return a goal. Try again."; aiErr=true; }
+  } catch(e){
+    aiErr=true;
+    aiMsg = e && e.code==="not_granted" ? "Claude is turned off for this page. Write the goal by hand."
+          : e && e.code==="rate_limited" ? "Too many requests right now. Try again in a minute."
+          : "Claude couldn't write the goal this time. Try again.";
+  }
+  aiBusy=false; render();
+}
+
+/* ---------- my tasks ---------- */
+function renderMine(app){
+  if (!me || !me.id){ app.innerHTML = `<div class="empty-state"><h2>My tasks</h2><p class="note">Sign in to Claude to see the actions assigned to you.</p></div>`; return; }
+  const td = today(), all = myTasks();
+  all.sort((a,b) => (a.t.due||"9999").localeCompare(b.t.due||"9999") || (a.t.s===1?-1:0) - (b.t.s===1?-1:0));
+  const g = { late: all.filter(x=>x.t.due && x.t.due<td), doing: all.filter(x=>!(x.t.due&&x.t.due<td) && x.t.s===1), next: all.filter(x=>!(x.t.due&&x.t.due<td) && x.t.s===0) };
+  const row = x => `<div class="mrow${x.t.due&&x.t.due<td?" late":""}"><button class="st s${x.t.s}" data-mst="${x.pid}|${x.i}|${x.j}" aria-label="Status: ${["to do","in progress","done"][x.t.s]}. Change"></button>
+    <button class="open" data-mopen="${x.pid}|${x.i}|${x.j}"><b>${esc(x.t.t)}</b>${x.t.g?`<small>Goal: ${esc(x.t.g)}</small><br>`:""}<small>${esc(x.p.name)} · ${L[x.i]}${x.j+1} ${esc(x.p.pillars[x.i].title)}</small></button>
+    <span class="due">${x.t.due||""}</span></div>`;
+  const grp = (k,h) => g[k].length ? `<section class="mgroup ${k}"><h3>${h} · ${g[k].length}</h3>${g[k].map(row).join("")}</section>` : "";
+  app.innerHTML = `<div><h2 class="ghead">My tasks</h2><p class="glead">${all.length ? `${all.length} open action${all.length===1?"":"s"} assigned to you across ${new Set(all.map(x=>x.pid)).size} plan${new Set(all.map(x=>x.pid)).size===1?"":"s"}.` : "Nothing is assigned to you yet. Open a plan, pick a pillar, and tap “+ Owner” on any action."}</p></div>
+    <div class="mine">${grp("late","Overdue")}${grp("doing","In progress")}${grp("next","To do")}</div>`;
+  document.querySelectorAll("[data-mst]").forEach(b => b.onclick = () => { const [pid,i,j]=b.dataset.mst.split("|"); const t=plans[pid].pillars[+i].tasks[+j]; t.s=(t.s+1)%3; t.by=me.id; t.at=Date.now(); logEvent(plans[pid], L[+i]+(+j+1), "Status → "+SNAME[t.s]); persist(pid); render(); });
+  document.querySelectorAll("[data-mopen]").forEach(b => b.onclick = () => { const [pid,i,j]=b.dataset.mopen.split("|"); cur=pid; lsSet("nxn-cur",pid); sel=POS[+i]; focusTask=[+i,+j]; setView("board"); });
+}
+
+/* ---------- all plans ---------- */
+function renderList(app, ids){
+  const rows = ids.map(id=>{ const p=plans[id], s=stats(p); return {id,p,s,pct:s.total?Math.round(s.done/s.total*100):0,nx:nextUpSorted(p)}; });
+  const key = { progress:(a,b)=>b.pct-a.pct||b.s.done-a.s.done, due:(a,b)=>((a.nx&&a.nx.t.due)||"9999").localeCompare((b.nx&&b.nx.t.due)||"9999"), recent:(a,b)=>b.p.updatedAt-a.p.updatedAt }[ovSort];
+  rows.sort(key);
+  const tot = rows.reduce((a,r)=>({d:a.d+r.s.done,t:a.t+r.s.total}),{d:0,t:0});
+  app.innerHTML = `<div class="ov-head"><div><h2 class="ghead">All plans</h2><p class="glead">${rows.length} plan${rows.length===1?"":"s"} · ${tot.d} of ${tot.t} actions done</p></div>
+    <div class="sorts"><span class="eyebrow">Order by</span>${[["progress","Progress"],["due","Next due"],["recent","Last worked on"]].map(([k,l])=>`<button class="chip${ovSort===k?" on":""}" data-sort="${k}">${l}</button>`).join("")}</div></div>
+    ${rows.length?`<div class="plist">${rows.map(r=>`<button class="prow" data-open="${r.id}">
+      <div><h3>${esc(r.p.name)}</h3><p class="goal">${esc(r.p.goal||"No goal yet")}</p></div>
+      <div class="meta"><span><span class="pct">${r.pct}%</span> · ${r.s.done}/${r.s.total} done${r.s.doing?` · ${r.s.doing} active`:""}</span><div class="bar"><i style="width:${r.pct}%"></i></div></div>
+      <p class="nextup${r.nx&&r.nx.late?" late":""}">${r.nx?`Next: <b>${L[r.nx.i]}${r.nx.j+1} ${esc(r.nx.t.t)}</b>${r.nx.t.due?` · due ${r.nx.t.due}`:""}${r.nx.t.s===1?" · in progress":""}${r.nx.t.o?` · ${esc(pname(r.nx.t.o))}`:""}`:r.s.total?"All actions done.":"No actions yet."}</p>
+    </button>`).join("")}</div>`:`<div class="empty-state"><h2>No plans yet</h2><button class="btn primary" id="emptyNew">Start a plan</button></div>`}`;
+  document.querySelectorAll("[data-sort]").forEach(b=>b.onclick=()=>{ ovSort=b.dataset.sort; lsSet("nxn-sort",ovSort); render(); });
+  document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{ cur=b.dataset.open; lsSet("nxn-cur",cur); sel=4; focusTask=null; setView("board"); });
+  const e=$("#emptyNew"); if (e) e.onclick=openNew;
+}
+function nextUpSorted(p){
+  const td=today(), c=[];
+  p.pillars.forEach((pl,i)=>pl.tasks.forEach((t,j)=>{ if(t.t&&t.s!==2) c.push({i,j,t,late:!!(t.due&&t.due<td)}); }));
+  c.sort((a,b)=>(a.t.s===1?0:1)-(b.t.s===1?0:1) || (a.t.due||"9999").localeCompare(b.t.due||"9999") || (a.i*8+a.j)-(b.i*8+b.j));
+  return c[0]||null;
+}
+function handoffText(p){
+  const id = Object.keys(plans).find(k=>plans[k]===p) || cur;
+  return `Help me execute my 9×9 plan "${p.name}".
+It is stored in my 9×9 Planner artifact: ${ARTIFACT_URL.includes("{{") ? "(open this planner and copy its link here)" : ARTIFACT_URL}
+Database collection "plans", document "${id}". Read it with the artifact data tool.
+
+Structure: goal in the centre; pillars is an object keyed A–H, each {title, tasks}; tasks is an object keyed 1–8. Each task has t (text), s (0 to do, 1 in progress, 2 done), due (YYYY-MM-DD), n (note), g (goal: what done looks like), o (owner id), by and at (who last changed status, and when).
+
+1. Show me where the plan stands: progress per pillar, anything overdue, what is in progress.
+2. Propose the next 3 tasks to do, in-progress and overdue first.
+3. Work through them with me, checking each against its goal g (write a sharper g first if it is empty or vague). Do the parts you can do yourself (research, drafts, documents).
+4. When a task moves, update that task only with a merge update, e.g. {"pillars":{"B":{"tasks":{"3":{"s":2,"n":"result or link"}}}},"updatedAt":<now ms>}, pinned to the version you read. Never rewrite the whole document; teammates edit it too.
+5. Add each change to the shared activity log in the same update: "log":{"<now ms>-cl":{"at":<now ms>,"c":"B3","m":"Done: <result>","by":""}}.`;
+}
+
+/* ---------- guide: brain dump -> brief -> grid ---------- */
+function covGrid(){
+  return `<div class="cov" aria-label="Brief coverage">${AREAS.map((a,i)=>{ const st=draft.areas[a.k].status; return `<div class="${st}"><span class="code">${i+1} · ${st==="covered"?"clear":st==="partial"?"vague":"open"}</span><span>${esc(a.t)}</span></div>`; }).join("")}</div>`;
+}
+function gLine(){ return gMsg ? `<p class="note${gErr?" err":""}" role="status">${esc(gMsg)}</p>` : ""; }
+function stepsBar(){
+  const lab=["Get it all out","Fill the gaps","Shape the grid"];
+  const can = n => n===1 || (n===2 && (draft.analysed || !sample)) || (n===3 && !!draft.proposal);
+  return `<nav class="steps">${lab.map((l,i)=>`<button class="step${draft.step===i+1?" on":""}" data-step="${i+1}" ${can(i+1)&&!gBusy?"":"disabled"}><b>${i+1}</b>${l}</button>`).join("")}</nav>`;
+}
+
+function renderGuide(app){
+  let main = "", aside = "";
+  if (draft.step===1){
+    main = `<h2 class="ghead">What do you want to build?</h2>
+      <p class="glead">Say or type everything on your mind, in any order and any language. Half-ideas, worries, names, numbers. ${sample?"Claude will sort it into a brief and ask about whatever is missing.":"Next you'll answer nine short questions to turn it into a plan."}</p>
+      <textarea class="dump" id="dump" placeholder="e.g. I want to launch a booking app for independent gyms. Start with 20 gyms in my city. Need a developer, maybe a payments partner. Not sure about pricing yet, worried about competitors…">${esc(draft.dump)}</textarea>
+      <div class="prompts" aria-label="Add a heading">${AREAS.map(a=>`<button data-add="${a.k}" title="${esc(a.q)}">+ ${esc(a.t)}</button>`).join("")}</div>
+      <div class="actions"><button class="btn ${sample?"ai":"primary"}" id="g1next" ${gBusy?"disabled":""}>${gBusy?"Reading your notes…":sample?"Organise my thoughts":"Next: nine questions"}</button>
+        ${draft.dump.trim()||draft.analysed?`<button class="btn sm" id="gReset">Start over</button>`:""}</div>
+      ${gLine()}`;
+    aside = `${covGrid()}
+      <p class="tip">To speak instead of type, tap the microphone on your phone keyboard and talk freely.</p>
+      <p class="tip">Stuck? Tap a heading under the box to add it, then talk about that part.</p>`;
+  } else if (draft.step===2){
+    const open = AREAS.filter(a=>draft.areas[a.k].status!=="covered").length;
+    main = `<h2 class="ghead">${esc(draft.title || "Your brief")}</h2>
+      <p class="glead">${sample ? (open ? `${open} of 9 parts are still open or vague. Answer what you can, then update the brief. Skip anything you don't know yet; it becomes a task on the grid.` : "Every part of the brief is clear. Edit anything that reads wrong, then shape the grid.")
+        : "Answer each question in a line or two. Leave blank what you don't know yet."}</p>
+      <div class="areas">${AREAS.map((a,i)=>{ const x=draft.areas[a.k]; const ask = sample ? x.q : a.q; return `<div class="area">
+        <div class="area-h"><h3><span class="code">${i+1}</span>${esc(a.t)}</h3>${sample?`<span class="pill ${x.status}">${x.status==="covered"?"Clear":x.status==="partial"?"Vague":"Open"}</span>`:""}</div>
+        ${sample && (x.note || x.status!=="missing") ? `<textarea data-note="${a.k}" id="n-${a.k}" rows="2" aria-label="${esc(a.t)} summary">${esc(x.note)}</textarea>` : ""}
+        ${ask && (!sample || x.status!=="covered") ? `<p class="q">${esc(ask)}</p><textarea class="ans" data-ans="${a.k}" id="a-${a.k}" rows="2" placeholder="Your answer">${esc(sample?x.a:x.note)}</textarea>` : ""}
+      </div>`; }).join("")}</div>
+      <div class="actions">${sample?`<button class="btn" id="gUpdate" ${gBusy?"disabled":""}>${gBusy&&gMsg.startsWith("Updating")?"Updating…":"Update brief"}</button>`:""}
+        <button class="btn ${sample?"ai":"primary"}" id="g2next" ${gBusy?"disabled":""}>${gBusy&&gMsg.startsWith("Shaping")?"Shaping…":"Shape the grid"}</button>
+        <button class="btn sm" data-step="1">Back to notes</button></div>
+      ${gLine()}`;
+    aside = `${covGrid()}<p class="tip">Dark squares are clear, outlined squares are vague, white squares are still open. Open parts are fine. They tell the grid where the first tasks are.</p>`;
+  } else {
+    const pr = draft.proposal;
+    main = `<h2 class="ghead">Shape the grid</h2>
+      <p class="glead">This is the centre and the ring around it. Rename anything, then build. ${sample?"Claude will then write 8 actions under each pillar from your brief.":"You'll fill the 64 actions on the grid."}</p>
+      <div><div class="eyebrow">Plan name</div><input class="ptitle" style="font-size:16px;font-weight:600" id="prName" value="${esc(pr.name)}"></div>
+      <div><div class="eyebrow">Goal · centre</div><textarea class="ptitle" id="prGoal" rows="2">${esc(pr.goal)}</textarea></div>
+      <div class="eyebrow">8 pillars</div>
+      <div class="rows prop">${pr.pillars.map((p,i)=>`<div class="row"><span class="code">${L[i]}</span><input type="text" data-prp="${i}" id="pp-${i}" value="${esc(p.title)}">${p.why?`<p class="why">${esc(p.why)}</p>`:""}</div>`).join("")}</div>
+      <div class="actions"><button class="btn primary" id="gBuild" ${gBusy?"disabled":""}>Build my 9×9</button>
+        ${sample?`<button class="btn sm" id="gRedo" ${gBusy?"disabled":""}>Suggest again</button>`:""}<button class="btn sm" data-step="2">Back to brief</button></div>
+      ${gLine()}`;
+    aside = `<div class="cov">${[0,1,2,3,4,5,6,7,8].map(b=>{ if(b===4) return `<div class="covered"><span class="code">GOAL</span><span>${esc((pr.goal||"").slice(0,60))}</span></div>`; const i=idxOf(b); return `<div><span class="code">${L[i]}</span><span>${esc(pr.pillars[i].title)}</span></div>`; }).join("")}</div>
+      <p class="tip">Each square here becomes a full 3×3 block of actions on the grid.</p>`;
+  }
+  app.innerHTML = `${stepsBar()}<div class="guide"><div class="gmain">${main}</div><aside class="aside">${aside}</aside></div>`;
+  wireGuide();
+}
+
+function wireGuide(){
+  document.querySelectorAll("[data-step]").forEach(b => b.onclick = () => { draft.step=+b.dataset.step; gMsg=""; saveDraft(); render(); window.scrollTo(0,0); });
+  const dump=$("#dump");
+  if (dump) dump.oninput = e => { draft.dump=e.target.value; saveDraft(); };
+  document.querySelectorAll("[data-add]").forEach(b => b.onclick = () => {
+    const a=AREAS.find(x=>x.k===b.dataset.add); const d=$("#dump");
+    d.value = (d.value.trim() ? d.value.replace(/\s+$/,"") + "\n\n" : "") + a.t + ": "; draft.dump=d.value; saveDraft();
+    d.focus(); d.setSelectionRange(d.value.length, d.value.length);
+  });
+  const r=$("#gReset"); if (r) r.onclick = () => { draft=blankDraft(); gMsg=""; saveDraft(); render(); };
+  const n1=$("#g1next"); if (n1) n1.onclick = async () => {
+    if (!draft.dump.trim()){ gMsg="Write or dictate something first, even a few lines."; gErr=true; render(); return; }
+    if (!sample){ draft.step=2; gMsg=""; saveDraft(); render(); return; }
+    if (await analyse("Reading your notes…")){ draft.step=2; render(); window.scrollTo(0,0); }
+  };
+  document.querySelectorAll("[data-note]").forEach(t => t.oninput = e => { draft.areas[t.dataset.note].note=e.target.value; saveDraft(); });
+  document.querySelectorAll("[data-ans]").forEach(t => t.oninput = e => { const x=draft.areas[t.dataset.ans]; if (sample) x.a=e.target.value; else { x.note=e.target.value; x.status=e.target.value.trim()?"covered":"missing"; refreshCov(); } saveDraft(); });
+  const up=$("#gUpdate"); if (up) up.onclick = () => analyse("Updating the brief…");
+  const n2=$("#g2next"); if (n2) n2.onclick = () => propose();
+  const redo=$("#gRedo"); if (redo) redo.onclick = () => propose();
+  const prN=$("#prName"); if (prN) prN.oninput = e => { draft.proposal.name=e.target.value; saveDraft(); };
+  const prG=$("#prGoal"); if (prG) prG.oninput = e => { draft.proposal.goal=e.target.value; saveDraft(); };
+  document.querySelectorAll("[data-prp]").forEach(t => t.oninput = e => { draft.proposal.pillars[+t.dataset.prp].title=e.target.value; saveDraft(); });
+  const bd=$("#gBuild"); if (bd) bd.onclick = build;
+}
+function refreshCov(){ const c=document.querySelector(".aside .cov"); if (c) c.outerHTML = covGrid(); }
+
+function briefText(){
+  return AREAS.map(a => { const x=draft.areas[a.k]; return `${a.t}: ${(x.note||"").trim()}${x.a&&x.a.trim()?" | Their new answer to \""+x.q+"\": "+x.a.trim():""}`; }).join("\n");
+}
+function sampleError(e){
+  return e && e.code==="not_granted" ? "Claude is turned off for this page, so the guide will use plain questions instead."
+       : e && e.code==="rate_limited" ? "Too many requests right now. Wait a minute and try again."
+       : "Claude couldn't finish that. Try again in a moment.";
+}
+
+async function analyse(msg){
+  gBusy=true; gMsg=msg+" This can take up to a minute."; gErr=false; render();
+  const prompt = `You help someone turn scattered thoughts into a structured project brief. Their notes may be dictated, messy and in any language.
+
+Map everything onto these 9 areas:
+${AREAS.map(a=>`- ${a.k} (${a.t}): ${a.q}`).join("\n")}
+
+Their raw notes:
+"""${draft.dump.slice(0,15000)}"""
+${draft.analysed ? `\nThe current brief, including any answers they just gave. Fold the new answers into the notes:\n${briefText()}\n` : ""}
+For each area return:
+- status: "covered" if clear and specific enough to plan from, "partial" if mentioned but vague, "missing" if absent.
+- note: 1-2 crisp sentences of what they actually said about it, in their language. Never invent facts. Empty string if missing.
+- question: for partial or missing areas, ONE sharp follow-up question specific to their idea (not generic), max 20 words, in their language. Empty string if covered.
+Also return "title": a 2-5 word name for the project, in their language.
+
+Reply with JSON only: {"title":"...","areas":{"outcome":{"status":"...","note":"...","question":"..."}, ...all 9 keys}}`;
+  try {
+    const out = await sample.json(prompt, { modelTier:"default" });
+    AREAS.forEach(a => { const r=(out.areas||{})[a.k]||{}; const x=draft.areas[a.k];
+      x.status = ["covered","partial","missing"].includes(r.status) ? r.status : (x.note?"partial":"missing");
+      if (typeof r.note==="string" && (r.note.trim() || !x.note)) x.note = r.note.trim();
+      x.q = x.status==="covered" ? "" : String(r.question||a.q); x.a = ""; });
+    if (out.title) draft.title = String(out.title).slice(0,60);
+    draft.analysed = true; gMsg = ""; gErr=false; saveDraft(); gBusy=false; render(); return true;
+  } catch(e){
+    if (e && e.code==="not_granted") sample=null;
+    gMsg = sampleError(e); gErr=true; gBusy=false; render(); return false;
+  }
+}
+
+async function propose(){
+  if (!sample){
+    const o=draft.areas.outcome.note.trim();
+    draft.proposal = { name: draft.title || (draft.dump.trim().split(/[.\n]/)[0]||"New plan").slice(0,40), goal: o, pillars: DEFAULT_PILLARS.map(t=>({title:t, why:""})) };
+    draft.step=3; saveDraft(); render(); window.scrollTo(0,0); return;
+  }
+  gBusy=true; gMsg="Shaping the grid… This can take up to a minute."; gErr=false; render();
+  const prompt = `Turn this project brief into the centre of a 9x9 Mandala chart (Harada method) plan.
+
+Brief:
+${briefText()}
+
+Return:
+- name: 2-5 word plan name (keep "${draft.title}" unless clearly wrong).
+- goal: ONE line, measurable, with a number and a date where the brief allows, max 16 words.
+- pillars: exactly 8 core areas that must all succeed for the goal. Cover the brief, including its open risks and gaps. No overlaps. Title 1-3 words. "why": max 14 words saying what this pillar covers for THIS project.
+Use the brief's language.
+Reply with JSON only: {"name":"...","goal":"...","pillars":[{"title":"...","why":"..."} x8]}`;
+  try {
+    const out = await sample.json(prompt, { modelTier:"default" });
+    const pil = (out.pillars||[]).slice(0,8).map(p=>({title:String(p.title||"").slice(0,40), why:String(p.why||"").slice(0,140)}));
+    while (pil.length<8) pil.push({title:DEFAULT_PILLARS[pil.length], why:""});
+    draft.proposal = { name:String(out.name||draft.title||"New plan").slice(0,60), goal:String(out.goal||draft.areas.outcome.note||"").slice(0,200), pillars:pil };
+    draft.step=3; gMsg=""; saveDraft(); gBusy=false; render(); window.scrollTo(0,0);
+  } catch(e){
+    if (e && e.code==="not_granted") sample=null;
+    gMsg = sampleError(e); gErr=true; gBusy=false; render();
+  }
+}
+
+async function build(){
+  const pr=draft.proposal;
+  if (!pr.goal.trim()){ gMsg="Give the centre a goal first."; gErr=true; render(); return; }
+  gBusy=true; render();
+  const areas={}; AREAS.forEach(a=>{ const n=draft.areas[a.k].note.trim(); if(n) areas[a.k]=n; });
+  const useAI = !!sample;
+  await createPlan(pr.name.trim()||"New plan", pr.goal.trim(), { pillars: pr.pillars.map(p=>p.title.trim()), brief:{ dump:draft.dump, areas } });
+  draft = blankDraft(); saveDraft(); gBusy=false; gMsg="";
+  if (useAI) generate(null);
+}
+
+/* ---------- new plan sheet ---------- */
+function openNew(){
+  gMsg=""; setView("guide");
+}
+function openQuick(){
+  const d=document.createElement("div"); d.className="sheet";
+  d.innerHTML=`<form class="card" id="newForm"><h2 style="margin:0;font-family:var(--f-display);font-stretch:80%">New plan</h2>
+    <label>Plan name<input id="nName" required placeholder="e.g. Gym booking app launch"></label>
+    <label>Goal for the centre<textarea id="nGoal" rows="2" placeholder="e.g. 1,000 paying users on the app by June"></textarea></label>
+    <div class="actions"><button class="btn primary" type="submit">Create</button><button class="btn" type="button" id="nCancel">Cancel</button></div></form>`;
+  document.body.appendChild(d);
+  d.querySelector("#nName").focus();
+  d.querySelector("#nCancel").onclick=()=>d.remove();
+  d.onclick=e=>{ if(e.target===d) d.remove(); };
+  d.querySelector("#newForm").onsubmit=e=>{ e.preventDefault(); const n=d.querySelector("#nName").value.trim(), g=d.querySelector("#nGoal").value.trim(); d.remove(); createPlan(n,g); };
+}
+function onPlanSel(e){ cur=e.target.value; view="board"; openNote=null; showHand=false; lsSet("nxn-view","board"); sel=4; focusTask=null; aiMsg=""; confirmDel=false; lsSet("nxn-cur",cur); render(); }
+
+/* ---------- boot ---------- */
+// each teammate who opens the planner is listed once, so they can be picked as an owner
+let joined = false;
+function joinTeam(){
+  if (joined || !db || !me || !me.id) return; joined = true;
+  db.collection("people").onSnapshot(snap => { people = snap.docs.map(d => d.id); ensureProfiles(); if (ownPick && !isTyping()) render(); }, () => {});
+  db.collection("people").doc(me.id).get().then(d => { const day = 864e5; if (!d.exists || !(d.data().seen > Date.now() - day)) return db.collection("people").doc(me.id).set({ seen: Date.now() }); }).catch(() => {});
+}
+// apply teammates' changes that arrived while you were typing
+document.addEventListener("focusout", () => setTimeout(() => {
+  if (isTyping()) return; let changed = false;
+  for (const id in latest){ if (dirty.has(id)) continue; plans[id] = normalize(latest[id]); synced[id] = toStore(plans[id]); delete latest[id]; changed = true; }
+  if (changed) render();
+}, 50));
+function loadLocal(){
+  try { const raw=lsGet("nxn-plans"); if (raw){ const o=JSON.parse(raw); for (const k in o) plans[k]=normalize(o[k]); } } catch(e){}
+  pickCur(); ready=true; render();
+}
+function pickCur(){
+  const want=lsGet("nxn-cur");
+  if (!cur || !plans[cur]) cur = (want && plans[want]) ? want : Object.keys(plans).sort((a,b)=>plans[b].updatedAt-plans[a].updatedAt)[0] || null;
+}
+render();
+const fallback = setTimeout(()=>{ if(!ready){ loadLocal(); } }, 11000);
+
+(async () => {
+  if (!window.claude || !window.claude.use){ clearTimeout(fallback); loadLocal(); return; }
+  claude.use("user").then(async u => { if (!u) return; user = u; me = await u.me(); if (!isTyping()) render(); joinTeam(); });
+  claude.use("sample").then(s => { sample = s; if ((ready || view==="guide") && !isTyping()) render(); });
+  db = await claude.use("db");
+  if (!db){ clearTimeout(fallback); if(!ready) loadLocal(); return; }
+  joinTeam();
+  unsub = db.collection("plans").onSnapshot(snap => {
+    clearTimeout(fallback);
+    const seen=new Set();
+    const typing = isTyping();
+    snap.docs.forEach(d => { seen.add(d.id); const data = d.data();
+      if (dirty.has(d.id) || (typing && d.id===cur)) { latest[d.id] = data; return; }
+      delete latest[d.id]; plans[d.id] = normalize(data); synced[d.id] = toStore(plans[d.id]);
+      if (Array.isArray(data.pillars)) legacy.add(d.id); else legacy.delete(d.id); });
+    Object.keys(plans).forEach(k => { if (!seen.has(k) && !dirty.has(k)) delete plans[k]; });
+    pickCur(); ensureProfiles();
+    const wasReady = ready; ready = true;
+    if (!typing && (view!=="guide" || !wasReady)) render(); else if (view==="board") refreshBoardOnly(); else renderTabs();
+  }, err => { clearTimeout(fallback); db=null; setStatus("Shared storage unavailable — saving on this device"); loadLocal(); });
+})();
+})();
+</script>
+
