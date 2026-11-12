@@ -1,6 +1,6 @@
 # 9×9 Planner for Claude
 
-**Turn any project into one visual plan of action, and work through it with Claude from any chat.**
+**Turn any project into one visual plan of action, and work through it with Claude from any chat.** Built on the 9×9 chart of the Harada Method, the goal-setting system behind top performers like Shohei Ohtani.
 
 One goal in the centre. Eight pillars around it that must all succeed. Eight actions under each pillar, every one with a clear definition of done. That's 64 actions covering everything from the code to the marketing, the budget, the paperwork and the documentation, on one grid you can see at a glance.
 
@@ -18,9 +18,13 @@ Development also tends to swallow all the attention. The app gets built, but nob
 
 The 9×9 Planner gives the project one home and one shape. It turns what's in your head, or in a long chat, into a complete checklist across every area of the project, keeps it updated as you and Claude work, and lets you pick up any part of it at any moment from any chat.
 
-## What a 9×9 is
+## Where the 9×9 comes from
 
-The 9×9 grid, also called a Mandala chart, comes from the Japanese Harada method. It became widely known through the chart baseball player Shohei Ohtani filled in as a high-school student, with the goal of becoming a first-round draft pick of eight professional teams.
+The 9×9 grid, also known as the Mandala chart or the "open window 64" chart, is the planning tool at the heart of the **Harada Method**, a Japanese approach to achieving ambitious goals.
+
+**Takashi Harada** created it as a track-and-field coach at a school in Osaka. His team started out among the weakest in the city. Harada studied how the world's best coaches and achievers worked, and turned what he learned into a method his students used every day: one clear goal, the qualities and actions needed to reach it, and a daily habit of tracking progress. His students went on to win national titles again and again. The method was later adopted by Japanese companies to develop their people, and it reached the West through the book *The Harada Method*, which Harada co-wrote with management author Norman Bodek.
+
+Its most famous user is **Shohei Ohtani**. As a high-school pitcher, coached by a teacher trained in Harada's approach, he filled in a 9×9 chart. In the centre he wrote his goal: to be the first-round draft pick of eight professional teams. Around it he placed the areas that had to come together, including body conditioning, control, pitch speed, mental toughness, character and even luck, each broken into eight concrete actions. He reached that goal and went on to become one of the most celebrated players in modern baseball. The chart is now used by athletes, founders and executives to turn a big ambition into daily work.
 
 The structure is simple and hard to cheat:
 
@@ -28,7 +32,7 @@ The structure is simple and hard to cheat:
 - **Eight pillars** surround it. They are the areas that must *all* succeed for the goal to happen. For a product launch these are usually things like product, deployment, marketing, partnerships, budget, admin and legal, documentation, and customers.
 - **Eight actions** sit under each pillar, ordered so the first one can start this week.
 
-Because every pillar gets the same eight slots, the grid makes it obvious when an area has been neglected. Empty squares are the questions you haven't answered yet.
+Because every pillar gets the same eight slots, the grid makes it obvious when an area has been neglected. Empty squares are the questions you haven't answered yet. This skill keeps that discipline and adds what the paper chart can't: Claude to help fill it in, a live view of progress, and a plan you can pick up from any chat.
 
 ## What it does
 
